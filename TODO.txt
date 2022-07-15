@@ -1,0 +1,21 @@
+IMPORTANT ---
+        Fixing php editor  
+---
+WORKING ON ---
+        Contact form 
+---
+Admin menu to see users and have the ability to update
+                -In a table?
+        - email
+        - password
+        - user_type (admin/user)
+        - view session id's and remove one or all of them
+normal user control
+        - Logging out all sessions of an account
+        - Email form to me
+
+Showing file sizes -- php filesize() dosen't want to work properly
+
+eventually go through the kids folder and sort it into Movies and Shows
+Go through shows and either delete or rename them
+Do something with the music

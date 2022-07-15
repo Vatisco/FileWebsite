@@ -1,0 +1,63 @@
+#Container{
+margin-left:10%;
+}
+
+.Title{
+    font-size: 30px;
+}
+
+#FileExtra, #FilesList, #CurrentPath, #back, #Search{
+    border:solid 2px black;
+}
+
+#FilesList tr:nth-child(even){background-color: #888;}
+#FilesList tr:nth-child(odd){background-color: #bbb;}
+
+#FilesList, #FileExtra{
+    empty-cells: hide;
+    margin:0;
+    font-size:20px;
+}
+
+.result{
+    border-spacing: 0;
+    width:100px;
+}
+
+.t0{
+    padding:0;
+    margin:0;
+}
+/*
+#CurrentPath{
+
+} 
+*//*
+#back{
+
+}
+*/
+
+#Errors{
+    margin:0 auto;
+}
+
+Video{
+    outline:none; 
+    width:100%; 
+    height:100%;
+}
+
+#adminArea{
+    float: right;
+}
+
+
+#UploadFile{
+    margin-right:100px;
+}
+
+#SaveResult, #EditorBack, #EditorSave{
+    margin-left:10px;
+    margin-right:10px;
+}
