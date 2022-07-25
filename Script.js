@@ -1,5 +1,6 @@
 var currentpath = "/", user_mode, user_type;
 var EditorShown = false;
+mouse = {x:0, y:0};
 $(document).ready(function () {
     $("#adminMode, #Video, #Files, #adminArea, #Editor, #Contact").hide();
     $.post("FileWebsite_server.php", { //check if the user is logged in
@@ -522,3 +523,10 @@ function ShowContactForm(){
     $("#MainContent").empty();
     $("#ContactForm").html(``);
 }
+
+$(document).mousemove(function(t) {
+    mouse.x = t.pageX;
+    //console.log(mouse.x);
+    mouse.y = t.pageY;
+    //console.log(mouse.y);
+});
