@@ -1,2 +1,3 @@
 # Ignoring database connection
 /FileWebsite_pdo.php
+/.gitignore
