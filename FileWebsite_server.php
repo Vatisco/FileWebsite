@@ -315,6 +315,4 @@ function CreateFileOrFolder($fileType, $Name, $Path){
         }
     }
 }
-
-
 ?>
