@@ -5,7 +5,7 @@ $(document).ready(function () {
     $("#adminMode, #Video, #Files, #adminArea, #Editor, #Contact").hide();
     $.post("FileWebsite_server.php", { //check if the user is logged in
     op:"getLoginStatus"
-    },function (data){
+    },function(data){
         if($(data).find("user_type").text() != "logged_out"){ //making sure the user is logged in
             console.log($(data).find("user_type").text());
             user_type = $(data).find("user_type").text();
@@ -128,7 +128,7 @@ function PrintFiles(path){// Getting the files from the Server
     $.post("FileWebsite_server.php", {
         op:"ShowFiles",
         directory:path
-    },function (data, status) {
+    },function(data, status) {
         TableStart(); //creating the back button and path viewer
         if (status == "success"){
             $(data).find("file").each(function() {filearray.push($(this).text())});
@@ -222,7 +222,7 @@ function LogIn(){ //log in function
 function LogOut(){ //logging out
     $.post("FileWebsite_server.php",{
         op:"LogOut"
-    },function (data, Status) {//hiding the file browser and showing the login form
+    },function(data, Status) {//hiding the file browser and showing the login form
         $("#Files, adminMode").hide();
         $("#loginForm").show();
         $("#loginButton").click(function (e) {
@@ -271,7 +271,7 @@ function adminArea(){// Creating the admin area
                     op:"CreateUser",
                     email:$("#userEmail").val(),
                     password:$("#userPassword").val()
-                },function (data) {
+                },function(data) {
                     if($(data).find("result").text() == "OK"){
                         alert("User with Email: " + $("#userEmail").val() + " added");
                         $("#createUserFields").empty();
@@ -334,14 +334,14 @@ function convertFile(file){// video file converting
         $.post("FileWebsite_server.php",{
             op:"adminpasscheck",
             input:$("#adminPassword").val()
-        },function (data) {
+        },function(data) {
             if($(data).find("result").text() == "true"){
                 newfile = prompt("New File name (Relative not absolute) and extension\n Currently" + currentpath + file);// means that you type in Cars(2006).mp4 not /media/external/Movies/Cars(2006)/Cars(2006).mp4
                 $.post("FileWebsite_server.php", {
                     op:"ConvertVideo",
                     currentfile:currentpath + file,
                     newfile:currentpath + newfile
-                },function (data) {
+                },function(data) {
                     PrintFiles(currentpath);
                 },);
             }
@@ -385,7 +385,7 @@ function renameFile(file){
         $.post("FileWebsite_server.php",{
             op:"adminpasscheck",
             input:$("#adminPassword").val()
-        },function (data) {
+        },function(data) {
             if($(data).find("result").text() == "true"){
                 newname = prompt("New File name (Relative not absolute) and extension\n Currently" + currentpath + file);// means that you type in Cars(2006).mp4 not /media/external/Movies/Cars(2006)/Cars(2006).mp4
                 if(newname != ""){
@@ -393,7 +393,7 @@ function renameFile(file){
                         op:"rename",
                         currentfile:currentpath + file,
                         newfile:currentpath + newname
-                    },function (data) {
+                    },function(data) {
                         PrintFiles(currentpath)
                     },);
                 }else{
@@ -410,13 +410,13 @@ function deleteFile(file){
             $.post("FileWebsite_server.php", {
                 op:"adminpasscheck",
                 input:$("#adminPassword").val()
-            },function (data) {
+            },function(data) {
                 if($(data).find("result").text() == "true"){
                     $.post("FileWebsite_server.php",{
                         op:"Delete",
                         file:currentpath + file
                     },
-                        function () {
+                        function() {
                             PrintFiles(currentpath);
                             console.log("File deleted");
                         },);
@@ -460,7 +460,7 @@ function editFile(file){
         $.post("FileWebsite_server.php",{
             op:"getFileContents",
             file:currentpath + file
-        },function (data, Status) {
+        },function(data, Status) {
             if(Status == "success"){
                 AdminToggle();
                 EditorShown = true;
