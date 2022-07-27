@@ -520,8 +520,8 @@ function SaveFile(file){
 }
 
 function ShowContactForm(){
-    $("#MainContent").empty();
-    $("#ContactForm").html(``);
+    $("#MainContent").hide();
+    $("#ContactForm").html(`<iframe src=FileWebsite_server.php?op=contactForm style='border:none;'> `);
 }
 
 $(document).mousemove(function(t) {

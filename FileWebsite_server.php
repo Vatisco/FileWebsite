@@ -1,5 +1,13 @@
 <?php
-require 'vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require "vendor/phpmailer/phpmailer/src/PHPMailer.php";
+require "vendor/phpmailer/phpmailer/src/SMTP.php";
+require "vendor/phpmailer/phpmailer/src/Exception.php";
+
+
 require_once('FileWebsite_pdo.php');
 require_once('check_logged_in.php');
 
@@ -92,6 +100,12 @@ switch($op){
         if($user_type == "admin"){
             CreateFileOrFolder($_POST['FileType'], $_POST['Name'], $_POST['Path']);
         }
+    break;
+    case "contactForm":
+        contactForm();
+    break;
+    case "Contact":
+        Contact($_POST['Name'], $_POST['Subject'], $_POST['Email'], $_POST['EmailContent']);
     break;
 };
 echo "</response>";
@@ -314,5 +328,51 @@ function CreateFileOrFolder($fileType, $Name, $Path){
             echo "File Already exists";
         }
     }
+}
+
+function contactForm(){
+    echo"
+    <html lang='en'>
+        <head>
+            <meta charset='UTF-8'> 
+            <link rel='stylesheet' href='style.css' >
+        </head>
+        <body>
+            <form action='FileWebsite_server.php' method='post' id='ContactForm'>
+                <input type='text' name='Name' id='NameInput' placeholder='Your name'>
+                <input type='text' name='Email' id='EmailInput' placeholder='Your Email'> 
+                <input type='text' name='Subject' id='SubjectInput' placeholder='Subject'>
+                <textarea name='EmailContent' id='ContentInput' placeholder='Content' form='ContactForm'></textarea><br>
+                <input type='hidden' name='op' value='Contact'>
+                <input type='submit'>
+            </form>
+        </body>
+    </html>";
+}
+
+function Contact($Name, $Subject, $email, $content){
+    global $GPASS;
+    define('GUSER', 'southserv22@gmail.com'); // GMail username
+	define('GPWD', $GPASS); //Gmail password. it would be a good idea to use an app specicfic password here
+	$mail = new PHPMailer(true);  // create a new object
+	$mail->IsSMTP(); // enable SMTP
+	$mail->SMTPDebug = 0;  // debugging: 1 = errors and messages, 2 = messages only
+	$mail->SMTPAuth = true;  // authentication enabled
+	$mail->SMTPSecure = 'ssl'; // secure transfer enabled REQUIRED for GMail
+	$mail->Host = 'smtp.gmail.com';
+	$mail->Port = 465; 
+	$mail->Username = GUSER;  
+	$mail->Password = GPWD;  
+	$mail->AddReplyTo($email, $Name);
+	$mail->SetFrom($email, $Name);
+	$mail->Subject = $Subject;
+	$mail->isHTML(true);
+	$mail->Body = $content;
+	$mail->AddAddress("quintencarlos@gmail.com");
+	if(!$mail->Send()) {
+		echo" Error with sending Email Error: " . $mail->ErrorInfo;
+	} else {
+		echo" Email Sent.";
+	}
 }
 ?>
