@@ -61,3 +61,32 @@ Video{
     margin-left:10px;
     margin-right:10px;
 }
+
+#DialogBox{
+    max-width:600px; 
+	display:none;
+	position: absolute;
+	border: 1px solid #000;
+	background-color:#ddd;
+	padding:10px;
+	z-index:10;
+	border-radius:5px;
+}
+
+.AdminOptions{
+    margin:0;
+}
+
+/*
+.ManageButtons{
+    
+}
+*/
+
+#closePopup{
+    float:right;
+    margin:0;
+    padding:0 3px 0 2px;
+    border: 1px solid #000;
+    background-color:#888;
+}

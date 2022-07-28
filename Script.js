@@ -2,7 +2,7 @@ var currentpath = "/", user_mode, user_type;
 var EditorShown = false;
 mouse = {x:0, y:0};
 $(document).ready(function () {
-    $("#adminMode, #Video, #Files, #adminArea, #Editor, #Contact").hide();
+    $("#adminMode, #Video, #Files, #adminArea, #Editor, #Contact, #DialogBox").hide();
     $.post("FileWebsite_server.php", { //check if the user is logged in
     op:"getLoginStatus"
     },function(data){
@@ -351,33 +351,39 @@ function convertFile(file){// video file converting
 }
 
 function adminFile(file, id, extension, index){//Creating extra button for admin users
-    let Buttons = "<tr class = 'result t" + id + "'><td id=" + id + "f class='file'>" + file + "</td><td id='renameid" + id + "'>Rename</td><td id='editid" + id + "'>Edit</td>";
+    let Buttons = "<tr class = 'result t" + id + "'><td id=" + id + "f class='file'>" + file + "</td><td id='manageid" + id +"' class='ManageButtons'>Manage</td></tr>";
+    let DialogBox = "<p id='closePopup' class='accountButton'>x</p><p id='renameid" + id + "' class='AdminOptions'>Rename</p><p id='editid" + id + "' class='AdminOptions'>Edit</p>"
     if(fileTypeArray[index] == "File"){
-        Buttons = Buttons + "<td id='deleteid" + id + "'>Delete</td>";
+        DialogBox = DialogBox + "<p id='deleteid" + id + "' class='AdminOptions'>Delete</p>";
     }else{
-        Buttons = Buttons + "<td id='deleteDirId" + id + "'>Delete</td>"
+        DialogBox = DialogBox  + "<p id='deleteDirId" + id + "' class='AdminOptions'>Delete</p>"
     }
     if(extension == "avi" || extension == "mkv" || extension == "mp4"){
-        Buttons = Buttons + "<td id ='convertid" + id + "'>Convert</td></tr>";
-    }else{
-        Buttons = Buttons + "</tr>";
+        DialogBox = DialogBox  + "<p id ='convertid" + id + "' class='AdminOptions'>Convert</p>";
     }
     $("#FilesList").append(Buttons);//extra button binding
-    $("#deleteid" + id).click(function (e) {
-        deleteFile(file);
+    $("#manageid" + id).click(function (e) { 
+        createDialogBox(DialogBox);
+        $("#deleteid" + id).click(function (e) {
+            deleteFile(file);
+        });
+        $("#deleteDirId" + id).click(function (e) { 
+            DeleteDir(file);
+        });
+        $("#convertid" + id).click(function (e) { 
+            convertFile(file);
+        });
+        $("#renameid" + id).click(function (e) { 
+            renameFile(file)
+        });
+        $("#editid" + id).click(function (e) { 
+            editFile(file)
+        });
+        $("#closePopup").click(function (e) { 
+            $("#DialogBox").hide();
+        });
     });
-    $("#deleteDirId" + id).click(function (e) { 
-        DeleteDir(file);
-    });
-    $("#convertid" + id).click(function (e) { 
-        convertFile(file);
-    });
-    $("#renameid" + id).click(function (e) { 
-        renameFile(file)
-    });
-    $("#editid" + id).click(function (e) { 
-        editFile(file)
-    });
+    
 }
 
 function renameFile(file){
@@ -521,7 +527,11 @@ function SaveFile(file){
 
 function ShowContactForm(){
     $("#MainContent").hide();
-    $("#ContactForm").html(`<iframe src=FileWebsite_server.php?op=contactForm style='border:none;'> `);
+    $("#ContactForm").html(`<button id='ContactFormBack' class='accountButton'>Back</button><br><iframe src=FileWebsite_server.php?op=contactForm style='border:none;'> `);
+    $("#ContactFormBack").click(function (e) { 
+        $("#ContactForm").empty();
+        $("#MainContent").show();
+    });
 }
 
 $(document).mousemove(function(t) {
@@ -530,3 +540,14 @@ $(document).mousemove(function(t) {
     mouse.y = t.pageY;
     //console.log(mouse.y);
 });
+
+function createDialogBox(html){
+    $("#DialogBox").html(html);
+    $("#DialogBox").css({
+        top: mouse.y,
+        left: mouse.x,
+        "max-height": 200,
+        "overflow-y": "auto", 
+        "display": "block"});
+    $("#DialogBox").show();
+}
