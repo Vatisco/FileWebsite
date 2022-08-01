@@ -107,6 +107,9 @@ switch($op){
     case "Contact":
         Contact($_POST['Name'], $_POST['Subject'], $_POST['Email'], $_POST['EmailContent']);
     break;
+    case "createAccountRequest":
+        createAccountRequest($_POST['name'], $_POST['email'], $_POST['password'], $_POST['number']);
+    break;
 };
 echo "</response>";
 
@@ -374,5 +377,35 @@ function Contact($Name, $Subject, $email, $content){
 	} else {
 		echo" Email Sent.";
 	}
+}
+
+function createAccountRequest($name, $email, $password, $number){
+    global $conn;
+    if(strlen($name) < 32 && $name != ""){
+        if(strlen($email) < 256 && strlen($email) >= 10 && $email != ""){
+            if(strlen($password) < 256 && $password != ""){
+                if(strlen($number) < 15){
+                    if(strlen($number) == 0){
+                        $number = 0;
+                    }
+                    $stmt = $conn->prepare("INSERT INTO ACCOUNT_REQUESTS(name, email, password, number) VALUES (?, ?, ?, ?)");
+                    $stmt->execute(array($name, $email, $password, $number));
+                    if($stmt->rowCount() == 1){
+                        echo"<result>OK</result>";
+                    }else{
+                        echo"<result>Error with Account request</result>";
+                    }
+                }else{
+                    echo"<result>Number too long</result>";
+                }
+            }else{
+                echo"<result>password too long or blank</result>";
+            }
+        }else{
+            echo"<result>invalid email or blank</result>";
+        }
+    }else{
+        echo"<result>Name Too long or blank<result>";
+    }
 }
 ?>

@@ -42,6 +42,10 @@ margin-left:10%;
     margin:0 auto;
 }
 
+#errorText{
+    color:#d00;
+}
+
 Video{
     outline:none; 
     width:100%; 
@@ -49,12 +53,9 @@ Video{
 }
 
 #adminArea{
-    float: right;
-}
-
-
-#UploadFile{
-    margin-right:100px;
+    background-color: #bbb;
+    border: 1px solid #000;
+    display:inline-block;
 }
 
 #SaveResult, #EditorBack, #EditorSave{
@@ -87,6 +88,7 @@ Video{
     float:right;
     margin:0;
     padding:0 3px 0 2px;
+    margin-bottom:3px;
     border: 1px solid #000;
     background-color:#888;
 }

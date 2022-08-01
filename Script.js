@@ -1,16 +1,43 @@
-var currentpath = "/", user_mode, user_type;
-var EditorShown = false;
+var currentpath = "/", user_mode, user_type, EditorShown = false, filearray = [];;
 mouse = {x:0, y:0};
+class fileClass{
+    constructor(name, fileType){
+        this.name = name;
+        this.fileType = fileType;
+    }
+};
+
 $(document).ready(function () {
     $("#adminMode, #Video, #Files, #adminArea, #Editor, #Contact, #DialogBox").hide();
     $.post("FileWebsite_server.php", { //check if the user is logged in
     op:"getLoginStatus"
     },function(data){
         if($(data).find("user_type").text() != "logged_out"){ //making sure the user is logged in
-            console.log($(data).find("user_type").text());
+            LogIn();
+        }else{
+            $("#loginButton").click(function (e) {
+                logInButton(); //show log in if the user isn't logged in
+            });
+            $("#loginFormContact").click(function (e) { 
+                ShowContactForm();
+            });
+            $("#requestAccountButton").click(function (e) { 
+                requestAccountform();
+            });
+        }
+    });
+    $("#SearchInput").bind("change", function (e) {
+        PrintFiles(currentpath);
+    });
+});
+
+function LogIn(){ //log in function
+    $.post("FileWebsite_server.php",{
+        op:"getLoginStatus"
+    },function (data) {
+        if($(data).find("user_type").text() != "logged_out"){
             user_type = $(data).find("user_type").text();
             user_mode = "user";
-            console.log("logged in");
             $("#loginForm").hide(); //hiding the login form
             $("#Files, #Contact").show(); // showing the files browser
             $("#logoutButton").click(function (e) {
@@ -27,22 +54,32 @@ $(document).ready(function () {
             }
             PrintFiles("/");
         }else{
-            $("#loginButton").click(function (e) {
-                LogIn(); //show log in if the user isn't logged in
-            });
+            addError("You are not logged in");
         }
-    });
-    $("#SearchInput").bind("change", function (e) {
-        PrintFiles(currentpath);
-    });
-});
+    },);
+}
+
+function logInButton(){
+    $.post("FileWebsite_server.php",{
+        op:"LogIn",
+        email:$("#email").val(),
+        password:$("#password").val()
+    },function (data) {
+        if ($(data).find("user_type").text() != "logged_out"){
+            LogIn();
+        }else{
+            addError("Your account information is incorrect");
+        }
+    },);
+}
+
 //Files blocked to normal users
 var Blacklist = ["", ".","..","$RECYCLE.BIN", "bin", "boot", "cdrom", "dev", "lib", "lib32", "lib64", "libx32", "lost+found", "mnt", "proc", "root", "run", "sbin", "snap", 
 "srv", "swap.img", "sys", "tmp", "var", "usr", "System Volume Information", "UMS.conf", "UMS.cred", "WMPInfo.xml", "database", "debug.log.prev", "Other", "Kids", "games",
-"data", "Subs", "etc", "opt", "minecraft", "MC", "!Albums", "!Games", "!hidden"]; // Blacklisting files we don't want viewable
+"data", "Subs", "etc", "opt", "minecraft", "MC", "!Albums", "!Games", "!hidden", "~", "Backups"]; // Blacklisting files we don't want viewable
 var DeleteBlacklist = ["", ".", "..", "bin", "boot", "cdrom", "dev", "lib", "lib32", "lib64", "libx32", "lost+found", "mnt", "proc", "root", "run", "sbin", "snap",
 "srv", "swap.img", "sys", "tmp", "var", "usr", "System Volume Information", "UMS.conf", "UMS.cred", "WMPInfo.xml", "database", "debug.log.prev", "Other", "Kids", "games",
-"data", "etc", "opt", "home", "media", "external", "Movies", "southserv", "minecraft", "vpnserver",  "world"]; //Blacklisting files we don't want to be deletable
+"data", "etc", "opt", "home", "media", "external", "Movies", "southserv", "minecraft", "vpnserver",  "world", "~", "Backups"]; //Blacklisting files we don't want to be deletable
 //Files blocked from everyone
 var Fullblacklist = ["", ".",".."];
 //declaring variables outside so everything can see them
@@ -50,14 +87,14 @@ var id = 0;
 var currentfiles = []//Array to hold files in
 function DisplayFiles(file, index){// Displaying the files on the page
     let filter = $("#SearchInput").val().trim().toLowerCase();// getting the text in the filter
-    let filterFile = file.toLowerCase(); //making all checks lowercase
-    if ((!Blacklist.includes(file) || (user_mode == "admin" && !Fullblacklist.includes(file))) && filterFile.includes(filter)){// removing files that are in the blacklist or not in the filter
-        file = file.toString();//changing to string in case of numbers
-        let FileType = FindExtension(file, index)
+    let filterFile = file.name.toLowerCase(); //making all checks lowercase
+    if ((!Blacklist.includes(file.name) || (user_mode == "admin" && !Fullblacklist.includes(file.name))) && filterFile.includes(filter)){// removing files that are in the blacklist or not in the filter
+        filename = file.name.toString();//changing to string in case of numbers
+        let FileType = FindExtension(file)
         if(user_mode == "admin"){
-            adminFile(file, id, FileType, index);
+            adminFile(file, id, FileType);
         }else{
-            $("#FilesList").append("<tr class = 'result t" + id + "'><td id=" + id + "f class='file'>" + file + "</td></tr>");
+            $("#FilesList").append("<tr class = 'result t" + id + "'><td id=" + id + "f class='file'>" + file.name + "</td></tr>");
         }
         let Fileselector = "#" + id + "f";// creating id's
         id++;
@@ -65,14 +102,14 @@ function DisplayFiles(file, index){// Displaying the files on the page
         switch(FileType){
             case("Directory"): //if there is no extension (a folder)
                 $(Fileselector).click(function (e) { //binding functions to each bit of text
-                    PrintFiles(currentpath + file + "/");
-                    currentpath = currentpath + file + "/";
+                    PrintFiles(currentpath + file.name + "/");
+                    currentpath = currentpath + file.name + "/";
                 });
             break;
             case("php"): // opens php files -- shown by the browser
             case("pdf"): // opens pdf files -- shown by the browser
                 $(Fileselector).click(function (e) {
-                    filepath = currentpath + file;
+                    filepath = currentpath + file.name;
                     filearr = filepath.split("/");
                     filearr.splice(0, 2);
                     currentfile = filearr.join("/");
@@ -83,7 +120,7 @@ function DisplayFiles(file, index){// Displaying the files on the page
                 $(Fileselector).click(function (e) {
                     $("#Files").hide();       
                     $("#Video").show();
-                    let filepath = currentpath + file;
+                    let filepath = currentpath + file.name;
                     let filearr = filepath.split("/");
                     filearr.splice(0, 2);
                     let currentfile = filearr.join("/"); 
@@ -101,7 +138,7 @@ function DisplayFiles(file, index){// Displaying the files on the page
             case("js"):
             case("txt"): //if the file can be edited
             $(Fileselector).click(function (e) { 
-                editFile(file);
+                editFile(file.name);
             });
             break;
         }
@@ -109,30 +146,18 @@ function DisplayFiles(file, index){// Displaying the files on the page
 
 }
 
-var filearray = [], fileTypeArray = [];
 function PrintFiles(path){// Getting the files from the Server
     $("#Errors, #FilesList").empty();
-    if(user_type == "admin" && user_mode == "admin"){
-        if(uploadopen){
-            $("#UploadFile").html("Upload File to current Directory");
-            $("#uploadFileFields").empty();
-            uploadopen = false
-        }
-        if(createopen){
-            $("#CreateFileFields, #CreationFields").empty();
-            $("#Create").html("Create");
-            createopen = false;
-        }
-    }
-    filearray = [], fileTypeArray = [];
+    $("#DialogBox").hide();
+    filearray = [];
     $.post("FileWebsite_server.php", {
         op:"ShowFiles",
         directory:path
     },function(data, status) {
         TableStart(); //creating the back button and path viewer
         if (status == "success"){
-            $(data).find("file").each(function() {filearray.push($(this).text())});
-            $(data).find("file_type").each(function() {fileTypeArray.push($(this).text())});
+            $(data).find("file").each(function() {filearray.push(new fileClass($(this).text(), ""))});
+            $(data).find("file_type").each(function(index) {filearray[index].fileType = $(this).text()})
             id = 0;
             if (currentpath.length > 1){// if the path you are at isnt blank or /, the back button works
                 Back();
@@ -157,12 +182,12 @@ function Back(){//The Back to Parent folder button
         }
         PrintFiles(prevdir);
         currentpath = prevdir;
-});
+    });
 }
 
-function FindExtension(file, index){//finds the extension on the end of the file name
-    if(fileTypeArray[index] != "Dir"){
-        let filename = file.substring(file.length-5);
+function FindExtension(file){//finds the extension on the end of the file name
+    if(file.fileType != "Dir"){
+        let filename = file.name.substring(file.name.length-5);
         if (filename.includes(".")){ //checking if the filename contains a .
             let arr = filename.split(".");
             return arr.pop();
@@ -180,53 +205,18 @@ function TableStart(){//empties the error area and the table for the files
     $("#FileExtra").append("<tr><td id='CurrentPath'>" + currentpath + "</td></tr><tr><td id='back'>Back to Parent folder</td></tr>")
 }
 
-function LogIn(){ //log in function
-    $.post("FileWebsite_server.php",{ 
-        op: "LogIn",
-        email: $("#email").val(),
-        password: $("#password").val()
-    },
-        function(data, Status){
-            if(Status == "success"){
-                if($(data).find("user_type").text() != "logged_out"){
-                    user_type = $(data).find("user_type").text();
-                    user_mode = "user";
-                    console.log(user_type);
-                    $("#loginForm").hide();
-                    $("#Files, #Contact").show();
-                    if(user_type == "admin"){
-                        $("#adminMode").show();
-                        $("#adminMode").click(function (e) {
-                            AdminToggle();
-                        });
-                    }
-                    PrintFiles("/");
-                    $("#logoutButton").click(function (e) {
-                        LogOut(); //logout button
-                    });
-                    $("#Contact").click(function (e) { 
-                        ShowContactForm();
-                    });
-                }else{
-                    $("#loginButton").click(function (e) {
-                        LogIn();
-                    });
-                    $("#Errors").empty(); //error if the login information was wrong
-                    $("#Errors").append("<p class='errors'>Your login information was incorrect</p>");
-                    };
-            }
-        },
-    );
-}
-
 function LogOut(){ //logging out
     $.post("FileWebsite_server.php",{
         op:"LogOut"
     },function(data, Status) {//hiding the file browser and showing the login form
-        $("#Files, adminMode").hide();
+        $("#Files, #adminMode").hide();
         $("#loginForm").show();
         $("#loginButton").click(function (e) {
             LogIn();
+        });
+        user_type = "logged_out";
+        $("#loginFormContact").click(function (e) { 
+            ShowContactForm();
         });
     },);
 }
@@ -246,85 +236,67 @@ function AdminToggle(){
     }
 }
 
-uploadopen = false, createopen = false;
 function adminArea(){// Creating the admin area
     if(user_mode == "admin"){
         $("#adminArea").empty();
         $("#adminArea").append(`
             <input type='password' id='adminPassword' placeholder='Admin Password'>
-            <br><button id='CreateUser' class='accountButton'>Create User</button>
-            <div id='createUserFields'></div>
-            <br><button id='UploadFile' class='accountButton'>Upload File to current Directory</button>
-            <div id='uploadFileFields'></div>
-            <br><button id='Create' class='accountButton'>Create File or Folder</button>
-            <div id='CreateFileFields'></div>
-            <div id='CreationFields'></div>`);// Adding admin buttons
+            <button id='CreateUser' class='accountButton'>Create User</button>
+            <button id='UploadFile' class='accountButton'>Upload File to current Directory</button>
+            <button id='Create' class='accountButton'>Create File or Folder</button>
+            `);// Adding admin buttons
         $("#createUserFields, #uploadFileFields").hide();
         $("#CreateUser").click(function (e) { 
-            $("#createUserFields").toggle();
-            $("#createUserFields").html(`<input type='text' id='userEmail' placeholder='New User Email'>
+            $("#DialogBox").toggle();
+            createDialogBox(`<input type='text' id='userEmail' placeholder='New User Email'>
             <br><input type='password' id='userPassword' placeholder='New User password'>
             <br><button id='confirmUser' class='accountButton'>Create</button>`);// Adding buttons for creating users
             $("#confirmUser").click(function (e) { 
-                if($("$userEmail").val().length() >= 10 && $("$userPassword").val() >= 5)
-                $.post("FileWebsite_server.php",{
-                    op:"CreateUser",
-                    email:$("#userEmail").val(),
-                    password:$("#userPassword").val()
-                },function(data) {
-                    if($(data).find("result").text() == "OK"){
-                        alert("User with Email: " + $("#userEmail").val() + " added");
-                        $("#createUserFields").empty();
-                    }else{
+                if($("#userEmail").val().length >= 10 && $("#userPassword").val().length >= 5){
+                    $.post("FileWebsite_server.php",{
+                        op:"CreateUser",
+                        email:$("#userEmail").val(),
+                        password:$("#userPassword").val()
+                    },function(data) {
+                        if($(data).find("result").text() == "OK"){
+                            alert("User with Email: " + $("#userEmail").val() + " added");
+                            $("#createUserFields").empty();
+                        }else{
                         alert("Error with account creation")
-                    }
-                },);
+                        }
+                    },);
+                }else{
+                    alert("Information entered too short");
+                }
             });
         });
         $("#UploadFile").click(function (e) { //Binding the upload button
-            if(uploadopen == false){
-                $("#UploadFile").html("Close Upload File Fields");// Changing the upload button text
-                $("#uploadFileFields").empty();
-                Fileuploaddata ='op=UploadForm&file=' + currentpath;//creating the iframe for uploading
-                $("#uploadFileFields").html(`<iframe src='FileWebsite_server.php?${Fileuploaddata}' style='border:none; width:300px; overflow:clip;'></iframe>`);
-                $("#uploadFileFields").show();
-                $("#UploadFilesubmit").click(function (e) { 
-                    PrintFiles(currentpath);
-                });
-                uploadopen = true;
-            }else{//Confirm upload button
-                $("#UploadFile").html("Upload File to current Directory");
-                $("#uploadFileFields").empty();
-                uploadopen = false
-            }
+            $("#DialogBox").toggle();
+            Fileuploaddata ='op=UploadForm&file=' + currentpath;//creating the iframe for uploading
+            createDialogBox(`<iframe src='FileWebsite_server.php?${Fileuploaddata}' style='border:none; width:300px; overflow:clip; height:100px;'></iframe>`);
+            $("#UploadFilesubmit").click(function (e) { 
+                PrintFiles(currentpath);
+            });
         });
         $("#Create").click(function (e) { 
-            if(createopen == false){
-                $("#Create").html("Close");
-                $("#CreateFileFields").empty();
-                $("#CreateFileFields").html(`<select id='FileOrFolder'><option value='Blank'></option><option value='Folder'>Folder</option><option value='File'>File</option></select>`);
-                $("#FileOrFolder").bind("change", function (e) {
-                    if($("#FileOrFolder").val() != "Blank"){
-                        let name = "", type = "";
-                        console.log($("#FileOrFolder").val());
-                        if($("#FileOrFolder").val() == "File"){
-                            name = "New File Name + Extension", type = "File";
-                        }else{
-                            name = "New Folder Name", type = "Folder";
-                        }
-                        let CreateFieldData = `op=CreateFoFForm&name=${name}&type=${type}&path=${currentpath}`;
-                        $("#CreationFields").empty();
-                        $("#CreationFields").html(`<iframe src='FileWebsite_server.php?${CreateFieldData}' style='border:none; width:300px; overflow:clip;'></iframe>`);
+            $("#DialogBox").toggle();
+            createDialogBox(`<select id='FileOrFolder'><option value='Blank'></option><option value='Folder'>Folder</option><option value='File'>File</option></select><div id='CreationFields'></div>`);
+            $("#FileOrFolder").bind("change", function (e) {
+                if($("#FileOrFolder").val() != "Blank"){
+                    let name = "", type = "";
+                    console.log($("#FileOrFolder").val());
+                    if($("#FileOrFolder").val() == "File"){
+                        name = "New File Name and Extension", type = "File";
                     }else{
-                        $("#CreationFields").empty();
+                        name = "New Folder Name", type = "Folder";
                     }
-                });
-                createopen = true;
-            }else{
-                $("#CreateFileFields, #CreationFields").empty();
-                $("#Create").html("Create File or Folder");
-                createopen = false;
-            }
+                    let CreateFieldData = `op=CreateFoFForm&name=${name}&type=${type}&path=${currentpath}`;
+                    $("#CreationFields").empty();
+                    $("#CreationFields").html(`<iframe src='FileWebsite_server.php?${CreateFieldData}' style='border:none; width:300px; overflow:clip; height:100px;'></iframe>`);
+                }else{
+                    $("#CreationFields").empty();
+                }
+            });
         });
     }
 }
@@ -350,10 +322,10 @@ function convertFile(file){// video file converting
 
 }
 
-function adminFile(file, id, extension, index){//Creating extra button for admin users
-    let Buttons = "<tr class = 'result t" + id + "'><td id=" + id + "f class='file'>" + file + "</td><td id='manageid" + id +"' class='ManageButtons'>Manage</td></tr>";
-    let DialogBox = "<p id='closePopup' class='accountButton'>x</p><p id='renameid" + id + "' class='AdminOptions'>Rename</p><p id='editid" + id + "' class='AdminOptions'>Edit</p>"
-    if(fileTypeArray[index] == "File"){
+function adminFile(file, id, extension){//Creating extra button for admin users
+    let Buttons = "<tr class = 'result t" + id + "'><td id=" + id + "f class='file'>" + file.name + "</td><td id='manageid" + id +"' class='ManageButtons'>Manage</td></tr>";
+    let DialogBox = "<p id='renameid" + id + "' class='AdminOptions'>Rename</p><p id='editid" + id + "' class='AdminOptions'>Edit</p>"
+    if(file.fileType == "File"){
         DialogBox = DialogBox + "<p id='deleteid" + id + "' class='AdminOptions'>Delete</p>";
     }else{
         DialogBox = DialogBox  + "<p id='deleteDirId" + id + "' class='AdminOptions'>Delete</p>"
@@ -365,25 +337,21 @@ function adminFile(file, id, extension, index){//Creating extra button for admin
     $("#manageid" + id).click(function (e) { 
         createDialogBox(DialogBox);
         $("#deleteid" + id).click(function (e) {
-            deleteFile(file);
+            deleteFile(file.name);
         });
         $("#deleteDirId" + id).click(function (e) { 
-            DeleteDir(file);
+            DeleteDir(file.name);
         });
         $("#convertid" + id).click(function (e) { 
-            convertFile(file);
+            convertFile(file.name);
         });
         $("#renameid" + id).click(function (e) { 
-            renameFile(file)
+            renameFile(file.name)
         });
         $("#editid" + id).click(function (e) { 
-            editFile(file)
-        });
-        $("#closePopup").click(function (e) { 
-            $("#DialogBox").hide();
+            editFile(file.name)
         });
     });
-    
 }
 
 function renameFile(file){
@@ -526,11 +494,15 @@ function SaveFile(file){
 }
 
 function ShowContactForm(){
-    $("#MainContent").hide();
+    $("#MainContent, #loginForm").hide();
     $("#ContactForm").html(`<button id='ContactFormBack' class='accountButton'>Back</button><br><iframe src=FileWebsite_server.php?op=contactForm style='border:none;'> `);
     $("#ContactFormBack").click(function (e) { 
         $("#ContactForm").empty();
-        $("#MainContent").show();
+        if(user_type == "user" || user_type == "admin"){
+            $("#MainContent").show();
+        }else{
+            $("#loginForm").show();
+        }
     });
 }
 
@@ -542,7 +514,7 @@ $(document).mousemove(function(t) {
 });
 
 function createDialogBox(html){
-    $("#DialogBox").html(html);
+    $("#DialogBox").html("<p id='closePopup' class='accountButton'>x</p><br>" + html);
     $("#DialogBox").css({
         top: mouse.y,
         left: mouse.x,
@@ -550,4 +522,38 @@ function createDialogBox(html){
         "overflow-y": "auto", 
         "display": "block"});
     $("#DialogBox").show();
+    $("#closePopup").click(function (e) { 
+        $("#DialogBox").hide();
+    });
+}
+
+function requestAccountform(){
+    $('#loginForm').hide();
+    $("#requestAccountForm").html(`<p id='requestAccountFormTitle'>Request an account</p>
+    <span class='fieldLabel'>Name</span><input type='text' id='requestAccountFormName'><br>
+    <span class='fieldLabel'>Email</span><input type='text' id='requestAccountFormEmail'><br>
+    <span class='fieldLabel'>Password</span><input type='password' id='requestAccountFormPassword'><br>
+    <span class='fieldLabel'>Number*</span><input type='text' id='requestAccountFormNumber'><br>
+    <button id='requestAccountFormButton' class='accountButton'>Request</button><br>
+    <p id='OptionalText'>* is Optional</p>`);
+    $("#requestAccountFormButton").click(function (e) { 
+        $.post("FileWebsite_server.php", {
+            op:"createAccountRequest",
+            name:$("#requestAccountFormName").val(),
+            email:$("#requestAccountFormEmail").val(),
+            password:$("#requestAccountFormPassword").val(),
+            number:$("requestAccountFormNumber").val()
+        },function (data) {
+            if($(data).find("#result").text() == "OK"){
+                addError("Account Requested");
+            }else{
+                addError($(data).find("result").text());
+            }
+        },);
+    });
+}
+
+function addError(errorContent){
+    $("#Errors").empty();
+    $("#Errors").html(`<p id='errorText'>${errorContent}</p>`);
 }
