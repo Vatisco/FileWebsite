@@ -156,6 +156,7 @@ function PrintFiles(path){// Getting the files from the Server
     },function(data, status) {
         TableStart(); //creating the back button and path viewer
         if (status == "success"){
+            $("#FilesList").empty();
             $(data).find("file").each(function() {filearray.push(new fileClass($(this).text(), ""))});
             $(data).find("file_type").each(function(index) {filearray[index].fileType = $(this).text()})
             id = 0;
@@ -167,7 +168,7 @@ function PrintFiles(path){// Getting the files from the Server
         }else{
             console.log("status:" + status)
         }
-});
+    });
 }
 
 function Back(){//The Back to Parent folder button
@@ -292,7 +293,25 @@ function adminArea(){// Creating the admin area
                     }
                     let CreateFieldData = `op=CreateFoFForm&name=${name}&type=${type}&path=${currentpath}`;
                     $("#CreationFields").empty();
-                    $("#CreationFields").html(`<iframe src='FileWebsite_server.php?${CreateFieldData}' style='border:none; width:300px; overflow:clip; height:100px;'></iframe>`);
+                    $("#CreationFields").html(`
+                    <input type='text' name='Name' id='FileorFolderInput' placeholder='${name}'>
+                    <button id='createFileorFolderConfirm'>Create</button>`);
+                    $("#createFileorFolderConfirm").bind(eventType, function (e) {
+                        $.post("FileWebsitre_server.php", {
+                            op:"Create",
+                            FileType:type,
+                            Name:$("#FileorFolderInput").val(),
+                            Path:currentpath
+                        },function (data) {
+                            if($(data).find("result").text() == "OK"){
+                                alert("Successfully created " + currentpath + name);
+                            }else if($(data).find("result") == "FAILED"){
+                                alert("Folder creation failed");
+                            }else if($(data).find("result").text() == "EXISTS"){
+                                alert("File/Folder already exists");
+                            }
+                        },);
+                    });
                 }else{
                     $("#CreationFields").empty();
                 }
@@ -495,7 +514,26 @@ function SaveFile(file){
 
 function ShowContactForm(){
     $("#MainContent, #loginForm").hide();
-    $("#ContactForm").html(`<button id='ContactFormBack' class='accountButton'>Back</button><br><iframe src=FileWebsite_server.php?op=contactForm style='border:none;'> `);
+    $("#ContactForm").html(`<input type='text' name='Name' id='ContactNameInput' placeholder='Your name'>
+    <input type='text' name='Email' id='ContactEmailInput' placeholder='Your Email'> 
+    <input type='text' name='Subject' id='ContactSubjectInput' placeholder='Subject'>
+    <textarea name='EmailContent' id='ContactContentInput' placeholder='Content' form='ContactForm'></textarea><br>
+    <button id='contactFormSubmit'>Submit</button>`);
+    $("#contactFormSubmit").click(function (e) { 
+        $.post("FileWebsite_server.php", {
+            op:"Contact",
+            Name:$("#ContactNameInput").val(),
+            Subject:$("#ContactSubjectInput").val(),
+            Email:$("#ContactEmailInput").val(),
+            EmailContent:$("#ContactContentInput").val()
+        },function (data) {
+            if($(data).find("result").text() == "OK"){
+                alert("Email Sent")
+            }else{
+                alert($(data).find("result").text());
+            }
+        },);
+    });
     $("#ContactFormBack").click(function (e) { 
         $("#ContactForm").empty();
         if(user_type == "user" || user_type == "admin"){

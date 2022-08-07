@@ -91,18 +91,10 @@ switch($op){
             saveFile($_POST['file'], $_POST['text']);
         }
     break;
-    case "CreateFoFForm":
-        if($user_type == "admin"){
-            CreateFileOrFolderForm($_GET['type'], $_GET['path'], $_GET['name']);
-        }
-    break;
     case "Create":
         if($user_type == "admin"){
             CreateFileOrFolder($_POST['FileType'], $_POST['Name'], $_POST['Path']);
         }
-    break;
-    case "contactForm":
-        contactForm();
     break;
     case "Contact":
         Contact($_POST['Name'], $_POST['Subject'], $_POST['Email'], $_POST['EmailContent']);
@@ -293,64 +285,25 @@ function saveFile($filepath, $SaveString){
     }
 }
 
-function CreateFileOrFolderForm($type, $currentpath, $name){
-    echo"
-    <html lang='en'>
-        <head>
-            <meta charset='UTF-8'> 
-            <link rel='stylesheet' href='style.css' >
-        </head>
-        <body>
-            <form action='FileWebsite_server.php' method='post'>
-                <input type='text' name='Name' id='NameInput' placeholder='" . $name . "'>
-                <input type='hidden' name='op' value='Create'>
-                <input type='hidden' name='FileType' value='$type'>
-                <input type='hidden' name='Path' value='$currentpath'>
-                <input type='submit' value='Create'>
-            </form>
-        </body>
-    </html>";
-}
-
 function CreateFileOrFolder($fileType, $Name, $Path){
     if($fileType == "Folder"){
         if(!file_exists($Path . $Name)){
             if(mkdir($Path . $Name)){
-                echo "Folder Created Succesfully";
+                echo "<result>OK</result>";
             }else{
-                echo "Folder creation failed";
+                echo "<result>FAILED</result>";
             }
         }else{
-            echo "Folder already exists";
+            echo "<result>EXISTS</result>";
         }
     }else{
         if(!file_exists($Path . $Name)){  
             $file = fopen($Path . $Name, "w");
             fclose($file);
         }else{
-            echo "File Already exists";
+            echo "<result>EXISTS</result>";
         }
     }
-}
-
-function contactForm(){
-    echo"
-    <html lang='en'>
-        <head>
-            <meta charset='UTF-8'> 
-            <link rel='stylesheet' href='style.css' >
-        </head>
-        <body>
-            <form action='FileWebsite_server.php' method='post' id='ContactForm'>
-                <input type='text' name='Name' id='NameInput' placeholder='Your name'>
-                <input type='text' name='Email' id='EmailInput' placeholder='Your Email'> 
-                <input type='text' name='Subject' id='SubjectInput' placeholder='Subject'>
-                <textarea name='EmailContent' id='ContentInput' placeholder='Content' form='ContactForm'></textarea><br>
-                <input type='hidden' name='op' value='Contact'>
-                <input type='submit'>
-            </form>
-        </body>
-    </html>";
 }
 
 function Contact($Name, $Subject, $email, $content){
@@ -373,9 +326,9 @@ function Contact($Name, $Subject, $email, $content){
 	$mail->Body = $content;
 	$mail->AddAddress("quintencarlos@gmail.com");
 	if(!$mail->Send()) {
-		echo" Error with sending Email Error: " . $mail->ErrorInfo;
+		echo"<result>Error with sending Email Error: " . $mail->ErrorInfo . "</result>";
 	} else {
-		echo" Email Sent.";
+		echo"<Result>OK</result";
 	}
 }
 
