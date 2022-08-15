@@ -2,7 +2,12 @@
 margin-left:10%;
 }
 
-.Title{
+a{
+    color: inherit;
+    text-decoration: inherit;
+}
+
+#Title{
     font-size: 30px;
 }
 

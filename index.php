@@ -13,19 +13,18 @@
         <script src="mode/clike/clike.js"></script>
         <script src="mode/htmlmixed/htmlmixed.js"></script>
         <link rel='stylesheet' href='lib/codemirror.css'>
-        <link rel='stylesheet' href='style.css'>
+        <?php echo "<link rel='stylesheet' href='style.css?v=123'>"; ?>
         <title>Southserv File sharing</title>
     </head>
     <body>
         <div id='Container'>
-            <div id='Errors'>
-            </div>
+            <div id='Errors'></div>
             <div id='Files'>
-                <p class='Title'>Southserv Files</p>
+                <a href="javascript:mainPage();" id='titleButton'><p id='Title'>Southserv Files</p></a>
                 <div id='MainContent'>
                     <div id='DialogBox'></div>
                     <div id='Buttons'>
-                        <button id='logoutButton' class='accountButton'>Log Out</button><button id='adminMode' class='accountButton'>Admin Mode</button><button id='Contact' class='accountButton'>Contact</button>
+                        <button id='logoutButton' class='accountButton'>Log Out</button><button id='adminMode' class='accountButton'>Admin Mode</button><button id='Contact' class='accountButton'>Contact</button><button id='accountMenu' class='accountButton'>Account</button>
                     </div>
                     <div id='adminArea'>
                         <input type='password' id='adminPassword' placeholder='Admin Password'>
@@ -48,15 +47,12 @@
                 <button id='loginButton' class='accountButton'>Log In</button>
                 <button id='loginFormContact' class='accountButton'>Contact</button>
                 <button id='requestAccountButton' class='accountButton'>Request an Account</button>
+                <button id='resetPasswordButton' class='accountButton'>Reset Password</button>
             </div>
-            <div id='ContactForm'>
-            </div>
-            <div id='requestAccountForm'>
-            </div>
+            <div id='formDiv'></div>
+            <div id='accountArea'></div>
         </div>
-        <div id='Video'>
-        </div>
-        <div id='Editor'>
-        </div>
+        <div id='Video'></div>
+        <div id='Editor'></div>
     </body>
 </html>

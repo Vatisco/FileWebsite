@@ -1,4 +1,7 @@
 <?php
+require_once 'FileWebsite_pdo.php';
+require_once 'check_logged_in.php';
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
@@ -7,9 +10,6 @@ require "vendor/phpmailer/phpmailer/src/PHPMailer.php";
 require "vendor/phpmailer/phpmailer/src/SMTP.php";
 require "vendor/phpmailer/phpmailer/src/Exception.php";
 
-
-require_once('FileWebsite_pdo.php');
-require_once('check_logged_in.php');
 
 if (isset($_POST['op'])){
     $op = $_POST['op'];
@@ -53,7 +53,7 @@ switch($op){
         }
     break;
     case "CreateUser":
-        if($user_type == "admin" && $email = "quintencarlos@gmail.com"){
+        if($user_type == "admin" && $email = $personal_email){
             CreateUser($_POST['email'], $_POST['password']);
         }
     break;
@@ -97,10 +97,21 @@ switch($op){
         }
     break;
     case "Contact":
-        Contact($_POST['Name'], $_POST['Subject'], $_POST['Email'], $_POST['EmailContent']);
+        Contact($_POST['Name'], $_POST['Subject'], $_POST['Email'], $_POST['EmailContent'], $personal_email);
     break;
     case "createAccountRequest":
         createAccountRequest($_POST['name'], $_POST['email'], $_POST['password'], $_POST['number']);
+    break;
+    case "getAccountInfo":
+        if($user_type != "logged_out"){
+            getAccountInfo();
+        }
+    break;
+    case "resetPassword":
+        setTempPassword($_POST['email']);
+    break;
+    case "changePassword":
+        changePassword($_POST['user_type'], $_POST['oldPass'], $_POST['newPass'], $_POST['email']);
     break;
 };
 echo "</response>";
@@ -135,13 +146,14 @@ function displayfilelist($input) {
 function DoLogIn($email, $password){
     global $conn, $sess_id;
 
-    $stmt = $conn->prepare("SELECT password FROM USERS WHERE EMAIL=:email");
+    $stmt = $conn->prepare("SELECT password, temp_pass FROM USERS WHERE EMAIL=:email");
     $stmt->bindParam(':email', $email);
     $stmt->execute();
 
     $result = $stmt->fetchAll();
     if(count($result) == 1){
         $hashed_password = $result[0]['password'];
+        $temp_pass = $result[0]['temp_pass'];
         if(password_verify($password, $hashed_password)){
             $stmt = $conn->prepare("SELECT user_id, user_type FROM USERS WHERE email=?");
             $stmt->execute(array($email));
@@ -150,7 +162,11 @@ function DoLogIn($email, $password){
             $user_type = $result[0]['user_type'];
             $stmt = $conn->prepare("INSERT INTO SESSIONS(user_id, session_id) VALUES(?,?)");
             $stmt->execute(array($user_id, $sess_id));
-            echo "<user_type>$user_type</user_type>";  
+            echo "<user_type>$user_type</user_type>"; 
+            $stmt = $conn->prepare("UPDATE USERS SET temp_pass=NULL WHERE USER_ID=?");
+            $stmt->execute(array($user_id));
+        }else if($password == $temp_pass){
+            echo "<user_type>temp</user_type>";
         }else{
             echo "<user_type>logged_out</user_type>";
         }
@@ -306,7 +322,7 @@ function CreateFileOrFolder($fileType, $Name, $Path){
     }
 }
 
-function Contact($Name, $Subject, $email, $content){
+function Contact($Name, $Subject, $email, $content, $address){
     global $GPASS;
     define('GUSER', 'southserv22@gmail.com'); // GMail username
 	define('GPWD', $GPASS); //Gmail password. it would be a good idea to use an app specicfic password here
@@ -324,11 +340,11 @@ function Contact($Name, $Subject, $email, $content){
 	$mail->Subject = $Subject;
 	$mail->isHTML(true);
 	$mail->Body = $content;
-	$mail->AddAddress("quintencarlos@gmail.com");
+	$mail->AddAddress($address);
 	if(!$mail->Send()) {
 		echo"<result>Error with sending Email Error: " . $mail->ErrorInfo . "</result>";
 	} else {
-		echo"<Result>OK</result";
+		echo"<result>OK</result";
 	}
 }
 
@@ -359,6 +375,85 @@ function createAccountRequest($name, $email, $password, $number){
         }
     }else{
         echo"<result>Name Too long or blank<result>";
+    }
+}
+
+function getAccountInfo(){
+    global $conn, $user_id;
+    $stmt = $conn->prepare("SELECT session_id FROM SESSIONS WHERE user_id=?");
+    $stmt->execute(array($user_id));
+    $sessions = $stmt->rowCount();
+    $stmt = $conn->prepare("SELECT email, number FROM USERS WHERE user_id=?");
+    $stmt->execute(array($user_id));
+    $result = $stmt->fetchAll();
+    if(count($result) == 1){
+        $email = $result[0]['email'];
+        $number = $result[0]['number'];
+        echo "<result>OK</result><email>$email</email><number>$number</number><sessions>$sessions</sessions>";
+    }else{
+        echo "<result>ERROR</result>";
+    }
+}
+
+function setTempPassword($email){
+    global $conn, $personal_email;
+    $temp_pass = RandomString(16);
+    $stmt = $conn->prepare("UPDATE USERS SET temp_pass=? WHERE email=?");
+    $stmt->execute(array($temp_pass, $email));
+    if($stmt->rowCount() == 1){
+        contact("Southserv", "Password reset", $personal_email, `We recieved a request to reset your password, you can log in with the temporary password: "$temp_pass". <br>Once you log in you will be asked to reset your password and the temporary one will be deleted.`, $email);
+        echo"<result>OK</result>";
+    }else{
+        echo"<result>ERROR</result>";
+    }
+    //Send email to person with temp password
+}
+
+function RandomString($length){
+    $charString = "abcdefghijklmnopqrstuvwxyz123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    $output = "";
+    for($i = 0; $i < $length; $i++){
+        $output = $output . substr($charString, rand(0, 62), 1);
+    }
+    return $output;
+}
+
+function changePassword($user_type, $oldPass, $newPass, $email){
+    global $conn;
+    if($user_type == "temp"){
+        $stmt = $conn->prepare("UPDATE USERS SET password=? WHERE email=?");
+        $stmt->execute(array(password_hash($newPass, PASSWORD_DEFAULT), $email));
+        if($stmt->rowCount() == 1){
+            echo"<result>OK</result>";
+        }else{
+            echo"<result>ERROR</result>";
+        }
+    }else if($user_type != "logged_out"){
+        $stmt = $conn->prepare("SELECT password FROM USERS WHERE email=?");
+        $stmt->execute(array($email));
+        $result = $stmt->fetchAll();
+        if(password_verify($oldPass, $result[0]['password'])){
+            $stmt = $conn->prepare("UPDATE USERS SET PASSWORD=? WHERE email=?");
+            $stmt->execute(array(password_hash($newPass, PASSWORD_DEFAULT), $email));
+            if($stmt->rowCount() == 1){
+                echo"<result>OK</result>";
+            }else{
+                echo"<result>ERROR</result>";
+            }
+        }
+    }
+}
+
+function clearAllOtherSessions(){
+    global $conn, $user_id, $sess_id;
+    $stmt = $conn->prepare("DELETE FROM SESSIONS WHERE user_id=?");
+    $stmt->execute(array($user_id));
+    $stmt = $conn->prepare("INSERT INTO SESSIONS(user_id, session_id) VALUES(?,?)");
+    $stmt->execute(array($user_id, $sess_id));
+    if($stmt->rowCount() == 1){
+        echo"<result>OK</result>";
+    }else{
+        echo "<result>ERROR</result>";
     }
 }
 ?>
