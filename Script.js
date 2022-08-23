@@ -6,13 +6,23 @@ class fileClass {
         this.fileType = fileType;
     }
 };
+class UserTableClass {
+    constructor(user_id, email, password, user_type, number, temp_pass){
+        this.user_id = user_id;
+        this.email = email;
+        this.password = password;
+        this.user_type = user_type;
+        this.number = number;
+        this.temp_pass = temp_pass;
+    }
+}
 
 $(document).ready(function () {
     $("#adminMode, #Video, #Files, #adminArea, #Editor, #Contact, #DialogBox").hide();
     $.post("FileWebsite_server.php", { //check if the user is logged in
         op: "getLoginStatus"
     }, function (data) {
-        console.log(data);
+        //console.log(data);
         if ($(data).find("user_type").text() != "logged_out") { //making sure the user is logged in
             LogIn();
         }else{
@@ -285,6 +295,7 @@ function adminArea() {// Creating the admin area
             <button id='CreateUser' class='accountButton'>Create User</button>
             <button id='UploadFile' class='accountButton'>Upload File to current Directory</button>
             <button id='Create' class='accountButton'>Create File or Folder</button>
+            <button id='showUsersButton' class='accountButton'>Show Users</button>
             `);// Adding admin buttons
         $("#createUserFields, #uploadFileFields").hide();
         $("#CreateUser").click(function (e) {
@@ -356,6 +367,30 @@ function adminArea() {// Creating the admin area
                     $("#CreationFields").empty();
                 }
             });
+        });
+        $("#showUsersButton").click(function (e) { 
+            $.post("FileWebsite_server.php",{
+                op: "getAllUsers"
+            },function (data, textStatus, jqXHR) {
+                console.log(data)
+                userTableDataArray = [], userTable = "";
+                $(data).find("user_id").each(function() { userTableDataArray.push(new UserTableClass($(this).text()))});
+                $(data).find("email").each(function(index) {userTableDataArray[index].email = $(this).text()});
+                $(data).find("password").each(function(index) {userTableDataArray[index].password = $(this).text()});
+                $(data).find("user_type").each(function(index) {userTableDataArray[index].user_type = $(this).text()});
+                $(data).find("number").each(function(index) {userTableDataArray[index].number = $(this).text()});
+                $(data).find("temp_pass").each(function(index) {userTableDataArray[index].temp_pass = $(this).text() || "null"});
+                $.each(userTableDataArray, function (index) { 
+                    userTable = userTable + `<tr><td id='userTableUserId${index}' class='allUsersTable'>${userTableDataArray[index].user_id}</td>
+                    <td id='userTableEmail${index}' class='allUsersTable'>${userTableDataArray[index].email}</td>
+                    <td id='userTablePassword${index}' class='allUsersTable'>${userTableDataArray[index].password}</td>
+                    <td id='userTableUserType${index}' class='allUsersTable'>${userTableDataArray[index].user_type}</td>
+                    <td id='userTableNumber${index}' class='allUsersTable'>${userTableDataArray[index].number}</td>
+                    <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
+                });
+                console.log(userTableDataArray);
+                $("#adminArea").append(`<br><div id='usersTable'><table>${userTable}</table</div>`);
+            },);
         });
     }
 }
@@ -648,12 +683,16 @@ function showAccountMenu() {
             <tr><td id='tableEmailTitle' class='accountAreaTitles'>Email:</td><td id='tableEmailContent'>${$(data).find("email").text()}</td></tr>
             <tr><td id='tablePasswordTitle' class='accountAreaTitles'>Password:</td><td id='tablePasswordContent'>Click here to change your password</td></tr>
             <tr><td id='tableNumberTitle' class='accountAreaTitles'>Number:</td><td id='tableNumberContent'>${$(data).find("number").text()}</td></tr>
-            <tr><td id='tableSessionsTitle' class='accountAreaTitles'>Sessions:</td><td id='tableSessionsContent'>${$(data).find("sessions").text()}</td></tr></table>`);
+            <tr><td id='tableSessionsTitle' class='accountAreaTitles'>Sessions:</td><td id='tableSessionsContent'>${$(data).find("sessions").text()}</td></tr>
+            <tr><td id='sessionRemovalTitle'class='accountAreaTitles'>Remove other Sessions</td><td id='removeOtherSessionsButtonTable'><button id='removeOtherSessionsButton' class='accountButtons'>Remove</button></td></tr></table>`);
             $("#tablePasswordContent").click(function (e) { 
                 changePassword();
             });
             $("#accountAreaBack").click(function (e) { 
                 mainPage();
+            });
+            $("#removeOtherSessionsButton").click(function (e) { 
+                clearAllOtherSessions();
             });
         }else{
             addError("Your account was not found, please contact an administrator")
@@ -692,7 +731,13 @@ function resetpassword(){
 }
 
 function clearAllOtherSessions(){
-
+    $.post("FileWebsite_server.php", {
+        op:"removeOtherSessions"
+    },function (data) {
+        if($(data).find("result").text() == "OK"){
+            $("#removeOtherSessionsButtonTable").html(`<p>All other sessions cleared.</p>`);
+        }
+    },);
 }
 
 function changePassword(email){

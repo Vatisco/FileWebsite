@@ -113,6 +113,14 @@ switch($op){
     case "changePassword":
         changePassword($_POST['user_type'], $_POST['oldPass'], $_POST['newPass'], $_POST['email']);
     break;
+    case "removeOtherSessions":
+        clearAllOtherSessions();
+    break;
+    case "getAllUsers":
+        if($user_type == "admin"){
+            getAllUsers();
+        }
+    break;
 };
 echo "</response>";
 
@@ -455,5 +463,29 @@ function clearAllOtherSessions(){
     }else{
         echo "<result>ERROR</result>";
     }
+}
+
+function getAllUsers(){
+    global $conn;
+    $stmt = $conn->prepare("SELECT user_id, email, password, user_type, number, temp_pass FROM USERS");
+    $stmt->execute();
+    $result = $stmt->fetchAll();
+    if($stmt->rowCount() > 1){
+        $output = "<reuslt>OK</result>";
+    }else{
+        echo "<result>ERROR</result>";
+        return;
+    }
+    for($i=0; $i < $stmt->rowCount(); $i++ ){
+        $user_id = $result[$i]['user_id'];
+        $email = $result[$i]['email'];
+        $password = $result[$i]['password'];
+        $user_type = $result[$i]['user_type'];
+        $number = $result[$i]['number'];
+        $temp_pass = $result[$i]['temp_pass'];
+        $output .= "<user_id>$user_id</user_id><email>$email</email><password>$password</password>
+        <user_type>$user_type</user_type><number>$number</number><temp_pass>$temp_pass</temp_pass>";
+    }
+    echo "$output";
 }
 ?>

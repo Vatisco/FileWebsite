@@ -20,7 +20,7 @@
         <div id='Container'>
             <div id='Errors'></div>
             <div id='Files'>
-                <a href="javascript:mainPage();" id='titleButton'><p id='Title'>Southserv Files</p></a>
+                <a href="javascript:mainPage()" id='titleButton'><p id='Title'>Southserv Files</p></a>
                 <div id='MainContent'>
                     <div id='DialogBox'></div>
                     <div id='Buttons'>

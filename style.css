@@ -2,6 +2,10 @@
 margin-left:10%;
 }
 
+p{
+    margin: 0;
+}
+
 a{
     color: inherit;
     text-decoration: inherit;
@@ -9,6 +13,7 @@ a{
 
 #Title{
     font-size: 30px;
+    margin: auto;
 }
 
 #FileExtra, #FilesList, #CurrentPath, #back, #Search{
@@ -96,4 +101,12 @@ Video{
     margin-bottom:3px;
     border: 1px solid #000;
     background-color:#888;
+}
+
+.accountAreaTitles{
+    font-size:20px;
+}
+
+#sessionRemovalTitle{
+    font-size:17px;
 }
