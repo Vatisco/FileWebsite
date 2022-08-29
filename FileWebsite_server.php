@@ -118,7 +118,12 @@ switch($op){
     break;
     case "getAllUsers":
         if($user_type == "admin"){
-            getAllUsers();
+            getAllUsers($_POST['table']);
+        }
+    break;
+    case "updateUser":
+        if($user_type == "admin"){
+            //ADD FUNCTION
         }
     break;
 };
@@ -366,7 +371,7 @@ function createAccountRequest($name, $email, $password, $number){
                         $number = 0;
                     }
                     $stmt = $conn->prepare("INSERT INTO ACCOUNT_REQUESTS(name, email, password, number) VALUES (?, ?, ?, ?)");
-                    $stmt->execute(array($name, $email, $password, $number));
+                    $stmt->execute(array($name, $email, password_hash($password, PASSWORD_DEFAULT), $number));
                     if($stmt->rowCount() == 1){
                         echo"<result>OK</result>";
                     }else{
@@ -465,13 +470,17 @@ function clearAllOtherSessions(){
     }
 }
 
-function getAllUsers(){
+function getAllUsers($TABLE){
     global $conn;
-    $stmt = $conn->prepare("SELECT user_id, email, password, user_type, number, temp_pass FROM USERS");
+    if($TABLE == "USERS"){
+        $stmt = $conn->prepare("SELECT user_id, email, password, user_type, number, temp_pass FROM USERS");
+    }else{
+        $stmt = $conn->prepare("SELECT user_id, email, password, user_type, number FROM ACCOUNT_REQUESTS");
+    }
     $stmt->execute();
     $result = $stmt->fetchAll();
-    if($stmt->rowCount() > 1){
-        $output = "<reuslt>OK</result>";
+    if($stmt->rowCount() >= 1){
+        $output = "<result>OK</result>";
     }else{
         echo "<result>ERROR</result>";
         return;

@@ -296,8 +296,10 @@ function adminArea() {// Creating the admin area
             <button id='UploadFile' class='accountButton'>Upload File to current Directory</button>
             <button id='Create' class='accountButton'>Create File or Folder</button>
             <button id='showUsersButton' class='accountButton'>Show Users</button>
+            <button id='showUserRequestsButton' class='accountButton'>Show User Requests</button>
+            
+            <div id='adminAreaContent'></div>
             `);// Adding admin buttons
-        $("#createUserFields, #uploadFileFields").hide();
         $("#CreateUser").click(function (e) {
             $("#DialogBox").toggle();
             createDialogBox(`<input type='text' id='userEmail' placeholder='New User Email'>
@@ -369,28 +371,10 @@ function adminArea() {// Creating the admin area
             });
         });
         $("#showUsersButton").click(function (e) { 
-            $.post("FileWebsite_server.php",{
-                op: "getAllUsers"
-            },function (data, textStatus, jqXHR) {
-                console.log(data)
-                userTableDataArray = [], userTable = "";
-                $(data).find("user_id").each(function() { userTableDataArray.push(new UserTableClass($(this).text()))});
-                $(data).find("email").each(function(index) {userTableDataArray[index].email = $(this).text()});
-                $(data).find("password").each(function(index) {userTableDataArray[index].password = $(this).text()});
-                $(data).find("user_type").each(function(index) {userTableDataArray[index].user_type = $(this).text()});
-                $(data).find("number").each(function(index) {userTableDataArray[index].number = $(this).text()});
-                $(data).find("temp_pass").each(function(index) {userTableDataArray[index].temp_pass = $(this).text() || "null"});
-                $.each(userTableDataArray, function (index) { 
-                    userTable = userTable + `<tr><td id='userTableUserId${index}' class='allUsersTable'>${userTableDataArray[index].user_id}</td>
-                    <td id='userTableEmail${index}' class='allUsersTable'>${userTableDataArray[index].email}</td>
-                    <td id='userTablePassword${index}' class='allUsersTable'>${userTableDataArray[index].password}</td>
-                    <td id='userTableUserType${index}' class='allUsersTable'>${userTableDataArray[index].user_type}</td>
-                    <td id='userTableNumber${index}' class='allUsersTable'>${userTableDataArray[index].number}</td>
-                    <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
-                });
-                console.log(userTableDataArray);
-                $("#adminArea").append(`<br><div id='usersTable'><table>${userTable}</table</div>`);
-            },);
+            showUsersTable("USERS");
+        },);
+        $("#showUserRequestsButton").click(function (e) { 
+            showUsersTable("ACCOUNT_REQUESTS")
         });
     }
 }
@@ -783,4 +767,78 @@ function changePassword(email){
             addError("Passwords don't match")
         }
     });
+}
+
+function showUsersTable(table){
+    $.post("FileWebsite_server.php",{
+        op: "getAllUsers",
+        table:table
+    },function (data){
+        userTableDataArray = [], userTable = "";
+        $(data).find("user_id").each(function() { userTableDataArray.push(new UserTableClass($(this).text()))});
+        $(data).find("email").each(function(index) {userTableDataArray[index].email = $(this).text()});
+        $(data).find("password").each(function(index) {userTableDataArray[index].password = $(this).text()});
+        $(data).find("user_type").each(function(index) {userTableDataArray[index].user_type = $(this).text()});
+        $(data).find("number").each(function(index) {userTableDataArray[index].number = $(this).text()});
+        $(data).find("temp_pass").each(function(index) {userTableDataArray[index].temp_pass = $(this).text() || "null"});
+        $.each(userTableDataArray, function (index) { 
+            userTable = userTable + `<tr><td id='userTableUserId${index}' class='allUsersTable'>${userTableDataArray[index].user_id}</td>
+            <td id='userTableEmail${index}' class='allUsersTable'><input type='text' id='${index}' class='tableTextBox' value='${userTableDataArray[index].email}'></td>
+            <td id='userTablePassword${index}' class='allUsersTable'><input type='text' class='tableTextBox' value='${userTableDataArray[index].password}' style='width:560px;'></td>
+            <td id='userTableUserType${index}' class='allUsersTable'>${MakeTableDefaults(userTableDataArray[index].user_type, userTableDataArray[index].user_id)}</td>
+            <td id='userTableNumber${index}' class='allUsersTable'><input type='text' class='tableTextBox' value='${userTableDataArray[index].number}' style='width:200px;'></td>
+            <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
+        });
+        console.log(userTableDataArray);
+        $("#adminAreaContent").html(`<p id='closeTable' class='accountButton'>x</p><div id='usersTable'>
+        <table><tr><td>ID</td>
+        <td>Email</td><td>Password</td><td>User Type</td><td>Number</td><td>Temp Pass</td>${userTable}</table></div>`);
+        $("#closeTable").click(function (e) { 
+            $("#adminAreaContent").empty();
+        });
+        $(".allUsersTable").bind("change", function (e) {
+            console.log(e.target.parentNode.id);
+            ParentNode = e.target.parentNode.id;
+            ID = ParentNode.match(/(\d+)/)[0];
+            console.log(ID);
+            var TableUserType, TableEmail, TablePassword, TableNumber;
+            if(ParentNode.includes("UserType")){
+                TableUserType = $(e.target.id).val();
+            }else if(ParentNode.includes("Email")){
+                TableEmail = $(e.target.id).val();
+            }else if(ParentNode.includes("Password")){
+                TablePassword = $(e.target.id).val();
+            }else if(ParentNode.includes("Number")){
+                TableNumber = $(e.target.id).val();
+            }
+            $.post("FileWebsite_server.php",{
+                op:"updateUser",
+                User_id:ID,
+                Email:TableEmail,
+                Password:TablePassword,
+                Number:TableNumber,
+                User_type:TableUserType
+            },function (data) {
+                
+            },);
+        });
+    });
+}
+
+function MakeTableDefaults(user_type, user_id){
+    switch(user_type){
+        case "admin":
+            output = "<option selected>admin</option><option>user</option><option>requested</option>";
+        break;
+        case "user":
+            output = "<option>admin</option><option selected>user</option><option>requested</option>";
+        break;
+        case "requested":
+            output = "<option>admin</option><option>user</option><option selected>requested</option>";
+        break;
+        default:
+            output = "ERROR"
+        break;
+    }
+    return `<select id='userTypeSelect${user_id}'>${output}</select>` 
 }
