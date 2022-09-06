@@ -7,8 +7,9 @@ class fileClass {
     }
 };
 class UserTableClass {
-    constructor(user_id, email, password, user_type, number, temp_pass){
+    constructor(user_id, name, email, password, user_type, number, temp_pass){
         this.user_id = user_id;
+        this.name = name;
         this.email = email;
         this.password = password;
         this.user_type = user_type;
@@ -22,7 +23,7 @@ $(document).ready(function () {
     $.post("FileWebsite_server.php", { //check if the user is logged in
         op: "getLoginStatus"
     }, function (data) {
-        //console.log(data);
+        console.log(data);
         if ($(data).find("user_type").text() != "logged_out") { //making sure the user is logged in
             LogIn();
         }else{
@@ -197,12 +198,14 @@ function PrintFiles(path) {// Getting the files from the Server
         TableStart(); //creating the back button and path viewer
         if (status == "success") {
             $("#FilesList").empty();
+            filearray = [];
             $(data).find("file").each(function () { filearray.push(new fileClass($(this).text(), "")) });
             $(data).find("file_type").each(function (index) { filearray[index].fileType = $(this).text() })
             id = 0;
             if (currentpath.length > 1) {// if the path you are at isnt blank or /, the back button works
                 Back();
             };
+            $("#FilesList").empty();
             filearray.forEach(DisplayFiles);
             console.log("File count:" + id);//gives incrementing id's to every file in the list
         } else {
@@ -302,13 +305,15 @@ function adminArea() {// Creating the admin area
             `);// Adding admin buttons
         $("#CreateUser").click(function (e) {
             $("#DialogBox").toggle();
-            createDialogBox(`<input type='text' id='userEmail' placeholder='New User Email'>
+            createDialogBox(`<input type='text' id='userName' placeholder='New User Name'>
+            <br><input type='text' id='userEmail' placeholder='New User Email'>
             <br><input type='password' id='userPassword' placeholder='New User password'>
-            <br><button id='confirmUser' class='accountButton'>Create</button>`);// Adding buttons for creating users
+            <br><button id='confirmUser' class='accountButton'>Create</button>`, "main");// Adding buttons for creating users
             $("#confirmUser").click(function (e) {
                 if ($("#userEmail").val().length >= 10 && $("#userPassword").val().length >= 5) {
                     $.post("FileWebsite_server.php", {
                         op: "CreateUser",
+                        name: $("#userName").val(),
                         email: $("#userEmail").val(),
                         password: $("#userPassword").val()
                     }, function (data) {
@@ -327,14 +332,14 @@ function adminArea() {// Creating the admin area
         $("#UploadFile").click(function (e) { //Binding the upload button
             $("#DialogBox").toggle();
             Fileuploaddata = 'op=UploadForm&file=' + currentpath;//creating the iframe for uploading
-            createDialogBox(`<iframe src='FileWebsite_server.php?${Fileuploaddata}' style='border:none; width:300px; overflow:clip; height:100px;'></iframe>`);
+            createDialogBox(`<iframe src='FileWebsite_server.php?${Fileuploaddata}' style='border:none; width:300px; overflow:clip; height:100px;'></iframe>`, "main");
             $("#UploadFilesubmit").click(function (e) {
                 PrintFiles(currentpath);
             });
         });
         $("#Create").click(function (e) {
             $("#DialogBox").toggle();
-            createDialogBox(`<select id='FileOrFolder'><option value='Blank'></option><option value='Folder'>Folder</option><option value='File'>File</option></select><div id='CreationFields'></div>`);
+            createDialogBox(`<div id='FileOrFolderDiv'><select id='FileOrFolder'><option value='Blank'></option><option value='Folder'>Folder</option><option value='File'>File</option></select><div id='CreationFields'></div></div>`, "main");
             $("#FileOrFolder").bind("change", function (e) {
                 if ($("#FileOrFolder").val() != "Blank") {
                     let name = "", type = "";
@@ -349,15 +354,16 @@ function adminArea() {// Creating the admin area
                     $("#CreationFields").html(`
                     <input type='text' name='Name' id='FileorFolderInput' placeholder='${name}'>
                     <button id='createFileorFolderConfirm'>Create</button>`);
-                    $("#createFileorFolderConfirm").bind(eventType, function (e) {
-                        $.post("FileWebsitre_server.php", {
+                    $("#createFileorFolderConfirm").click(function (e) {
+                        $.post("FileWebsite_server.php", {
                             op: "Create",
                             FileType: type,
                             Name: $("#FileorFolderInput").val(),
                             Path: currentpath
                         }, function (data) {
+                            console.log(data)
                             if ($(data).find("result").text() == "OK") {
-                                alert("Successfully created " + currentpath + name);
+                                $("#FileOrFolderDiv").html(`<p>File successfully created</p>`);
                             } else if ($(data).find("result") == "FAILED") {
                                 alert("Folder creation failed");
                             } else if ($(data).find("result").text() == "EXISTS") {
@@ -413,7 +419,7 @@ function adminFile(file, id, extension) {//Creating extra button for admin users
     }
     $("#FilesList").append(Buttons);//extra button binding
     $("#manageid" + id).click(function (e) {
-        createDialogBox(DialogBox);
+        createDialogBox(DialogBox, "main");
         $("#deleteid" + id).click(function (e) {
             deleteFile(file.name);
         });
@@ -439,18 +445,21 @@ function renameFile(file) {
             input: $("#adminPassword").val()
         }, function (data) {
             if ($(data).find("result").text() == "true") {
-                newname = prompt("New File name (Relative not absolute) and extension\n Currently" + currentpath + file);// means that you type in Cars(2006).mp4 not /media/external/Movies/Cars(2006)/Cars(2006).mp4
-                if (newname != "") {
-                    $.post("FileWebsite_server.php", {
-                        op: "rename",
-                        currentfile: currentpath + file,
-                        newfile: currentpath + newname
-                    }, function (data) {
-                        PrintFiles(currentpath)
-                    });
-                } else {
-                    alert("New Name too short")
-                }
+                createDialogBox("<input type='text' id='RenameInput' value='"+file+"'><br><button id='confirmRename' class='accountButton'>Rename</button>", "secondary");
+                $("#confirmRename").click(function (e) { 
+                    newname = $("#RenameInput").val();
+                    if (newname != "" && newname != null) {
+                        $.post("FileWebsite_server.php", {
+                            op: "rename",
+                            currentfile: currentpath + file,
+                            newfile: currentpath + newname
+                        }, function (data) {
+                            PrintFiles(currentpath)
+                        });
+                    } else {
+                        alert("New Name too short")
+                    }
+                });
             }
         });
     }
@@ -606,18 +615,25 @@ $(document).mousemove(function (t) {
     //console.log(mouse.y);
 });
 
-function createDialogBox(html) {
-    $("#DialogBox").html("<p id='closePopup' class='accountButton'>x</p><br>" + html);
-    $("#DialogBox").css({
+function createDialogBox(html, box) {
+    selector = "test"
+    if(box == "main"){
+        selector = "#DialogBox";
+    }else if(box == "secondary"){
+        selector = "#secondaryDialogBox";
+    }
+    $(selector).html(`<p id='closePopup' class='accountButton closePopup'>x</p><br>` + html);
+    $(selector).css({
         top: mouse.y,
         left: mouse.x,
         "max-height": 200,
         "overflow-y": "auto",
         "display": "block"
     });
-    $("#DialogBox").show();
-    $("#closePopup").click(function (e) {
-        $("#DialogBox").hide();
+    $(selector).show();
+    $(".closePopup").click(function (e) {
+        console.log(e.target.parentNode.id)
+        $("#" + e.target.parentNode.id + ",#secondaryDialogBox").hide();
     });
 }
 
@@ -664,6 +680,7 @@ function showAccountMenu() {
         if ($(data).find("result").text() == "OK"){
             $("#accountArea").html(`<p id='accountAreaBack'>Back</p>
             <table id='accountAreaTable'>
+            <tr><td id='tableNameTitle' class='accountAreaTitles'>Name:</td><td id='tableNameContent'>${$(data).find("name").text()}</td></tr>
             <tr><td id='tableEmailTitle' class='accountAreaTitles'>Email:</td><td id='tableEmailContent'>${$(data).find("email").text()}</td></tr>
             <tr><td id='tablePasswordTitle' class='accountAreaTitles'>Password:</td><td id='tablePasswordContent'>Click here to change your password</td></tr>
             <tr><td id='tableNumberTitle' class='accountAreaTitles'>Number:</td><td id='tableNumberContent'>${$(data).find("number").text()}</td></tr>
@@ -726,6 +743,7 @@ function clearAllOtherSessions(){
 
 function changePassword(email){
     $("#loginForm, #MainContent, #accountArea").hide();
+    var changePasswordOld;
     if(user_type != "logged_out" && user_type != "temp"){//admin or user
         $("#formDiv").html(`<p id='changePasswordBack'>Back</p><br><span class='fieldLabel'>New Password</span><input type='password' placeholder='New Password' id='changePasswordInput'><br>
         <span class='fieldLabel'>password Confirm</span><input type='password' placeholder='New Password Confirm' id='changePasswordInputConfirm'><br>
@@ -776,56 +794,85 @@ function showUsersTable(table){
     },function (data){
         userTableDataArray = [], userTable = "";
         $(data).find("user_id").each(function() { userTableDataArray.push(new UserTableClass($(this).text()))});
+        $(data).find("name").each(function(index) {userTableDataArray[index].name = $(this).text()});
         $(data).find("email").each(function(index) {userTableDataArray[index].email = $(this).text()});
         $(data).find("password").each(function(index) {userTableDataArray[index].password = $(this).text()});
         $(data).find("user_type").each(function(index) {userTableDataArray[index].user_type = $(this).text()});
         $(data).find("number").each(function(index) {userTableDataArray[index].number = $(this).text()});
         $(data).find("temp_pass").each(function(index) {userTableDataArray[index].temp_pass = $(this).text() || "null"});
         $.each(userTableDataArray, function (index) { 
-            userTable = userTable + `<tr><td id='userTableUserId${index}' class='allUsersTable'>${userTableDataArray[index].user_id}</td>
-            <td id='userTableEmail${index}' class='allUsersTable'><input type='text' id='${index}' class='tableTextBox' value='${userTableDataArray[index].email}'></td>
-            <td id='userTablePassword${index}' class='allUsersTable'><input type='text' class='tableTextBox' value='${userTableDataArray[index].password}' style='width:560px;'></td>
-            <td id='userTableUserType${index}' class='allUsersTable'>${MakeTableDefaults(userTableDataArray[index].user_type, userTableDataArray[index].user_id)}</td>
-            <td id='userTableNumber${index}' class='allUsersTable'><input type='text' class='tableTextBox' value='${userTableDataArray[index].number}' style='width:200px;'></td>
+            userTable = userTable + `<tr><td id='userTableUserId${index}' class='allUsersTable userIdTable' title='Delete User'>${userTableDataArray[index].user_id}</td>
+            <td id='userTableName${index}' class='allUsersTable'><input type='text' id='NameInput${index}' class='tableTextBox' value='${userTableDataArray[index].name}'></td>
+            <td id='userTableEmail${index}' class='allUsersTable'><input type='text' id='EmailInput${index}' class='tableTextBox' value='${userTableDataArray[index].email}'></td>
+            <td id='userTablePassword${index}' class='allUsersTable'><input type='text' id='PasswordInput${index}' class='tableTextBox' value='${userTableDataArray[index].password}'></td>
+            <td id='userTableUserType${index}' class='allUsersTable'>${MakeTableDefaults(userTableDataArray[index].user_type, userTableDataArray[index].user_id, index)}</td>
+            <td id='userTableNumber${index}' class='allUsersTable'><input type='text' id='NumberInput${index}' class='tableTextBox' value='${userTableDataArray[index].number}' style='width:200px;'></td>
             <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
         });
         console.log(userTableDataArray);
         $("#adminAreaContent").html(`<p id='closeTable' class='accountButton'>x</p><div id='usersTable'>
-        <table><tr><td>ID</td>
+        <table><tr><td>ID</td><td>Name</td>
         <td>Email</td><td>Password</td><td>User Type</td><td>Number</td><td>Temp Pass</td>${userTable}</table></div>`);
         $("#closeTable").click(function (e) { 
             $("#adminAreaContent").empty();
         });
         $(".allUsersTable").bind("change", function (e) {
-            console.log(e.target.parentNode.id);
             ParentNode = e.target.parentNode.id;
-            ID = ParentNode.match(/(\d+)/)[0];
-            console.log(ID);
-            var TableUserType, TableEmail, TablePassword, TableNumber;
+            selector = ("#" + ParentNode);
+            Id = ParentNode.match(/(\d+)/)[0];
+            Id = $("#userTableUserId" + Id).text();
+            var TableUserType, TableEmail, TablePassword, TableNumber, Tablename;
             if(ParentNode.includes("UserType")){
-                TableUserType = $(e.target.id).val();
+                TableUserType = $("#" + ParentNode + " option:selected").text();
             }else if(ParentNode.includes("Email")){
-                TableEmail = $(e.target.id).val();
+                TableEmail = $("#" + e.target.id).val();
             }else if(ParentNode.includes("Password")){
-                TablePassword = $(e.target.id).val();
+                TablePassword = $("#" + e.target.id).val();
             }else if(ParentNode.includes("Number")){
-                TableNumber = $(e.target.id).val();
+                TableNumber = $("#" + e.target.id).val(); 
+            }else if(ParentNode.includes("Name")){
+                Tablename = $("#" + e.target.id).val();
             }
             $.post("FileWebsite_server.php",{
                 op:"updateUser",
-                User_id:ID,
-                Email:TableEmail,
-                Password:TablePassword,
-                Number:TableNumber,
-                User_type:TableUserType
+                table:table,
+                user_id:Id,
+                name:Tablename,
+                email:TableEmail,
+                password:TablePassword,
+                number:TableNumber,
+                user_type:TableUserType
             },function (data) {
-                
+                console.log($(data).find("result").text());
             },);
+        });
+        $(".userIdTable").click(function (e) { 
+            DeleteId = e.target.id.match(/(\d+)/)[0]
+            if(confirm("Are you sure you want to delete this user?")){
+                $.post("FileWebsite_server.php", {
+                    op: "adminpasscheck",
+                    input: $("#adminPassword").val()
+                }, function (data) {
+                    if ($(data).find("result").text() == "true") {
+                        $.post("FileWebsite_server.php", {
+                            op:"deleteUser",
+                            id:DeleteId,
+                            table:table
+                        },function (data) {
+                            if($(data).find("result").text() == "OK"){
+                                alert("User Deleted");
+                            }
+                        },);
+                    }else{
+                        alert("Check Admin Password");
+                    }
+                });
+            }
         });
     });
 }
 
-function MakeTableDefaults(user_type, user_id){
+function MakeTableDefaults(user_type, user_id, index){
     switch(user_type){
         case "admin":
             output = "<option selected>admin</option><option>user</option><option>requested</option>";
@@ -837,8 +884,8 @@ function MakeTableDefaults(user_type, user_id){
             output = "<option>admin</option><option>user</option><option selected>requested</option>";
         break;
         default:
-            output = "ERROR"
+            output = "<option>ERROR</option>";
         break;
     }
-    return `<select id='userTypeSelect${user_id}'>${output}</select>` 
+    return `<select id='userTypeSelect${index}'>${output}</select>` 
 }

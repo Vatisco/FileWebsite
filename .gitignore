@@ -1,4 +1,5 @@
 # Ignoring database connection
 /FileWebsite_pdo.php
-
-/.TODO.txt
+/Certs/origin_ca_rsa_root.pem
+/Certs/southienz.com.key
+/Certs/southienz.com.pem

@@ -30,7 +30,15 @@ switch($op){
         DoLogIn($_POST['email'], $_POST['password']);
     break;
     case "getLoginStatus":
-        echo "<user_type>$user_type</user_type>";
+        $stmt = $conn->prepare("SELECT user_type FROM USERS WHERE user_id=?");
+        $stmt->execute(array($user_id));
+        $results = $stmt->fetchAll();
+        if($stmt->rowCount() == 1){
+            $user_type = $result[0]['user_type'];
+            echo"<user_type>$user_type</user_type>";
+        }else{
+            echo "<user_type>logged_out</user_type>";
+        }
     break;
     case "LogOut":
         LogOut();
@@ -54,7 +62,7 @@ switch($op){
     break;
     case "CreateUser":
         if($user_type == "admin" && $email = $personal_email){
-            CreateUser($_POST['email'], $_POST['password']);
+            CreateUser($_POST['name'], $_POST['email'], $_POST['password']);
         }
     break;
     case "ConvertVideo":
@@ -123,10 +131,15 @@ switch($op){
     break;
     case "updateUser":
         if($user_type == "admin"){
-            //ADD FUNCTION
+            updateUser($_POST['table'], $_POST['user_id'], (isset($_POST['name'])) ? $_POST['email'] : "",(isset($_POST['email'])) ? $_POST['email'] : "",(isset($_POST['password'])) ? $_POST['password'] : "",(isset($_POST['number'])) ? $_POST['number'] : "",(isset($_POST['user_type'])) ? $_POST['user_type'] : "");
         }
     break;
-};
+    case "deleteUser":
+        if($user_type == "admin"){
+            deleteUser($_POST['id'], $_POST['Table']);
+        }
+    break;
+}
 echo "</response>";
 
 function DeleteFile($file){
@@ -200,12 +213,18 @@ function isAdmin(){
     return $user_type == 'admin';
 }
 
-function CreateUser($email, $password){
+function CreateUser($name, $email, $password){
     global $conn;
-    $stmt = $conn->prepare("INSERT INTO USERS(email, password, user_type) VALUES (?,?,'user')");
-    $stmt->execute(array($email, password_hash($password, PASSWORD_DEFAULT)));
-    if($stmt->rowCount()==1){
-        echo"<result>OK</result>";
+    $stmt = $conn->prepare("SELECT user_id FROM USERS WHERE email=?");
+    $stmt->execute(array($email));
+    if($stmt->rowCount() == 0){
+        $stmt = $conn->prepare("INSERT INTO USERS(name, email, password, user_type, number) VALUES (?,?,?,'user', ?)");
+        $stmt->execute(array($name, $email, password_hash($password, PASSWORD_DEFAULT), "0"));
+        if($stmt->rowCount()==1){
+            echo"<result>OK</result>";
+        }else{
+            echo"<result>ERROR</result>";
+        }
     }else{
         echo"<result>ERROR</result>";
     }
@@ -329,6 +348,7 @@ function CreateFileOrFolder($fileType, $Name, $Path){
         if(!file_exists($Path . $Name)){  
             $file = fopen($Path . $Name, "w");
             fclose($file);
+            echo"<Result>OK</result>";
         }else{
             echo "<result>EXISTS</result>";
         }
@@ -370,12 +390,18 @@ function createAccountRequest($name, $email, $password, $number){
                     if(strlen($number) == 0){
                         $number = 0;
                     }
-                    $stmt = $conn->prepare("INSERT INTO ACCOUNT_REQUESTS(name, email, password, number) VALUES (?, ?, ?, ?)");
-                    $stmt->execute(array($name, $email, password_hash($password, PASSWORD_DEFAULT), $number));
-                    if($stmt->rowCount() == 1){
-                        echo"<result>OK</result>";
+                    $stmt = $conn->prepare("SELECT user_id FROM USERS WHERE email=?");
+                    $stmt->execute(array($email));
+                    if($stmt->rowCount() == 0){
+                        $stmt = $conn->prepare("INSERT INTO ACCOUNT_REQUESTS(name, email, password, number) VALUES (?, ?, ?, ?)");
+                        $stmt->execute(array($name, $email, password_hash($password, PASSWORD_DEFAULT), $number));
+                        if($stmt->rowCount() == 1){
+                            echo"<result>OK</result>";
+                        }else{
+                            echo"<result>Error with Account request</result>";
+                        }
                     }else{
-                        echo"<result>Error with Account request</result>";
+                        echo"<result>An account with this email already exists</result>";
                     }
                 }else{
                     echo"<result>Number too long</result>";
@@ -396,13 +422,14 @@ function getAccountInfo(){
     $stmt = $conn->prepare("SELECT session_id FROM SESSIONS WHERE user_id=?");
     $stmt->execute(array($user_id));
     $sessions = $stmt->rowCount();
-    $stmt = $conn->prepare("SELECT email, number FROM USERS WHERE user_id=?");
+    $stmt = $conn->prepare("SELECT name, email, number FROM USERS WHERE user_id=?");
     $stmt->execute(array($user_id));
     $result = $stmt->fetchAll();
     if(count($result) == 1){
+        $name = $result[0]['name'];
         $email = $result[0]['email'];
         $number = $result[0]['number'];
-        echo "<result>OK</result><email>$email</email><number>$number</number><sessions>$sessions</sessions>";
+        echo "<result>OK</result><name>$name</name><email>$email</email><number>$number</number><sessions>$sessions</sessions>";
     }else{
         echo "<result>ERROR</result>";
     }
@@ -473,9 +500,9 @@ function clearAllOtherSessions(){
 function getAllUsers($TABLE){
     global $conn;
     if($TABLE == "USERS"){
-        $stmt = $conn->prepare("SELECT user_id, email, password, user_type, number, temp_pass FROM USERS");
+        $stmt = $conn->prepare("SELECT name, user_id, email, password, user_type, number, temp_pass FROM USERS");
     }else{
-        $stmt = $conn->prepare("SELECT user_id, email, password, user_type, number FROM ACCOUNT_REQUESTS");
+        $stmt = $conn->prepare("SELECT name, user_id, email, password, user_type, number FROM ACCOUNT_REQUESTS");
     }
     $stmt->execute();
     $result = $stmt->fetchAll();
@@ -486,15 +513,98 @@ function getAllUsers($TABLE){
         return;
     }
     for($i=0; $i < $stmt->rowCount(); $i++ ){
+        $name = $result[$i]['name'];
         $user_id = $result[$i]['user_id'];
         $email = $result[$i]['email'];
         $password = $result[$i]['password'];
         $user_type = $result[$i]['user_type'];
         $number = $result[$i]['number'];
         $temp_pass = $result[$i]['temp_pass'];
-        $output .= "<user_id>$user_id</user_id><email>$email</email><password>$password</password>
+        $output .= "<user_id>$user_id</user_id><name>$name</name><email>$email</email><password>$password</password>
         <user_type>$user_type</user_type><number>$number</number><temp_pass>$temp_pass</temp_pass>";
     }
     echo "$output";
+}
+
+function UpdateUser($table, $ID, $user_name,  $user_email, $user_password, $user_number, $user_type ){
+    global $conn;
+    if($table == "USERS"){
+        $stmt = $conn->prepare("SELECT name, email, password, number, user_type FROM USERS WHERE user_id=?");
+    }else{
+        $stmt = $conn->prepare("SELECT name, email, password, number, user_type FROM ACCOUNT_REQUESTS WHERE user_id=?");
+    }
+    $stmt->execute(array($ID));
+    $result = $stmt->fetchAll();
+    if($stmt->rowCount() == 1){
+        $name = $result[0]['name'];
+        $email = $result[0]['email'];
+        $password = $result[0]['password'];
+        $number = $result[0]['number'];
+        $U_type = $result[0]['user_type'];
+        if($table == "USERS"){
+            if($user_type != "requested"){
+                $stmt = $conn->prepare("UPDATE USERS SET name=?, email=?, password=?, number=?, user_type=? WHERE user_id=?");
+                $stmt->execute(array(($user_name != "") ? $user_name : $name, ($user_email != "") ? $user_email : $email, ($user_password != "") ? $user_password : $password, ($user_number != "") ? $user_number : $number, ($user_type != "") ? $user_type : $U_type , $ID));
+                if($stmt->rowCount() == 1){
+                    echo"<result>OK</result>";
+                }else{
+                    echo"<result>ERROR</result>";
+                }  
+            }else{
+                $stmt = $conn->prepare("INSERT INTO ACCOUNT_REQUESTS(name, email, password, number, user_type) VALUES (?, ?, ?, ?, 'requested')");
+                $stmt->execute(array($name, $email, $password, $number));
+                if($stmt->rowCount() == 1){
+                    $stmt = $conn->prepare("DELETE FROM USERS WHERE user_id=?");
+                    $stmt->execute(array($ID));
+                    if($stmt->rowCount() == 1){
+                        echo"<result>OK</result>";
+                    }
+                }else{
+                    echo"<result>ERROR</result>";
+                }
+            }
+        }else{
+            if($user_type != "requested" || $user_type != ""){
+                $stmt = $conn->prepare("INSERT INTO USERS(name, email, password, number, user_type, temp_pass) VALUES (?,?,?,?,?, null)");
+                $stmt->execute(array(($user_name != "") ? $user_name : $name, ($user_email != "") ? $user_email : $email, ($user_password != "") ? $user_password : $password, ($user_number != "") ? $user_number : $number, $user_type));
+                if($stmt->rowCount() == 1){
+                    $stmt = $conn->prepare("DELETE FROM ACCOUNT_REQUESTS WHERE user_id=?");
+                    $stmt->execute(array($ID));
+                    if($stmt->rowCount() == 1){
+                        echo"<result>OK</result>";
+                    }else{
+                        echo"<result>ERROR</result>";
+                    }
+                }else{
+                    echo"<result>ERROR</result>";
+                }
+            }else{
+                $stmt = $conn->prepare("UPDATE ACCOUNT_REQUESTS SET name=?, email=?, password=?, number=?, user_type=? WHERE user_id=?");
+                $stmt->execute(array(($user_name != "") ? $user_name : $name, ($user_email != "") ? $user_email : $email, ($user_password != "") ? $user_password : $password, ($user_number != "") ? $user_number : $number, ($user_type != "") ? $user_type : $U_type , $ID));
+                if($stmt->rowCount() == 1){
+                    echo"<result>OK</result>";
+                }else{
+                    echo"<result>ERROR</result>";
+                }  
+            }
+        }
+    }else{
+        echo"<result>ERRORb</result>";
+    }
+}
+
+function deleteUser($Id, $TABLE){
+    global $conn;
+    if($TABLE == "USERS"){
+        $stmt = $conn->prepare("DELETE FROM USERS WHERE user_id=?");
+    }else if($TABLE == "ACCOUNT_REQUESTS"){
+        $stmt = $conn->prepare("DELETE FROM ACCOUNT_REQUESTS WHERE user_id=?");
+    }
+    $stmt->execute(array($Id));
+    if($stmt->rowCount() == 1){
+        echo"<result>OK</result>";
+    }else{
+        echo"<result>ERROR</result>";
+    }
 }
 ?>
