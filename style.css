@@ -73,7 +73,7 @@ Video{
     margin-right:10px;
 }
 
-#DialogBox{
+#DialogBox, #secondaryDialogBox{
     max-width:600px; 
 	display:none;
 	position: absolute;

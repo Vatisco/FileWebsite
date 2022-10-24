@@ -10,7 +10,12 @@ require "vendor/phpmailer/phpmailer/src/PHPMailer.php";
 require "vendor/phpmailer/phpmailer/src/SMTP.php";
 require "vendor/phpmailer/phpmailer/src/Exception.php";
 
+if($_SERVER['PHP_SELF'] == __FILE__){
+    $stmt = $conn->prepare("DELETE FROM SESSIONS WHERE last_login < DATE_ADD(now(), INTERVAL -7 DAY)");
+    $stmt->execute();
+}
 
+echo $_SERVER['PHP_SELF'];
 if (isset($_POST['op'])){
     $op = $_POST['op'];
 }else if(isset($_GET['op'])){
@@ -35,6 +40,8 @@ switch($op){
         $results = $stmt->fetchAll();
         if($stmt->rowCount() == 1){
             $user_type = $result[0]['user_type'];
+            $stmt = $conn->prepare("UPDATE SESSIONS SET last_login=? WHERE session_id=?");
+            $stmt->execute(array(date("Y-n-t G:i:s",time()), $sess_id));
             echo"<user_type>$user_type</user_type>";
         }else{
             echo "<user_type>logged_out</user_type>";
@@ -142,6 +149,8 @@ switch($op){
 }
 echo "</response>";
 
+#DELETE FROM SESSIONS WHERE last_login < now() - interval 30 SECONDS;
+
 function DeleteFile($file){
     global $user_type;
     if($user_type == "admin"){
@@ -186,8 +195,8 @@ function DoLogIn($email, $password){
             $result = $stmt->fetchAll();
             $user_id = $result[0]['user_id'];
             $user_type = $result[0]['user_type'];
-            $stmt = $conn->prepare("INSERT INTO SESSIONS(user_id, session_id) VALUES(?,?)");
-            $stmt->execute(array($user_id, $sess_id));
+            $stmt = $conn->prepare("INSERT INTO SESSIONS(user_id, session_id, last_login) VALUES(?,?,?)");
+            $stmt->execute(array($user_id, $sess_id, date("Y-n-t G:i:s",time())));
             echo "<user_type>$user_type</user_type>"; 
             $stmt = $conn->prepare("UPDATE USERS SET temp_pass=NULL WHERE USER_ID=?");
             $stmt->execute(array($user_id));

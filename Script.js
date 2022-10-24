@@ -23,7 +23,7 @@ $(document).ready(function () {
     $.post("FileWebsite_server.php", { //check if the user is logged in
         op: "getLoginStatus"
     }, function (data) {
-        console.log(data);
+        //console.log(data);
         if ($(data).find("user_type").text() != "logged_out") { //making sure the user is logged in
             LogIn();
         }else{
@@ -98,7 +98,7 @@ function logInButton() {
         email: $("#email").val(),
         password: $("#password").val()
     }, function (data) {
-        console.log(data);
+        //console.log(data);
         if ($(data).find("user_type").text() != "logged_out" && $(data).find("user_type").text() != "temp") {
             LogIn();
         }else if($(data).find("user_type").text() == "temp"){
@@ -343,7 +343,6 @@ function adminArea() {// Creating the admin area
             $("#FileOrFolder").bind("change", function (e) {
                 if ($("#FileOrFolder").val() != "Blank") {
                     let name = "", type = "";
-                    console.log($("#FileOrFolder").val());
                     if ($("#FileOrFolder").val() == "File") {
                         name = "New File Name and Extension", type = "File";
                     } else {
@@ -361,13 +360,14 @@ function adminArea() {// Creating the admin area
                             Name: $("#FileorFolderInput").val(),
                             Path: currentpath
                         }, function (data) {
-                            console.log(data)
+                            //console.log(data)
                             if ($(data).find("result").text() == "OK") {
-                                $("#FileOrFolderDiv").html(`<p>File successfully created</p>`);
+                                $("#FileOrFolderDiv").html(`<p>Created successfully</p>`);
+                                PrintFiles(currentpath);
                             } else if ($(data).find("result") == "FAILED") {
-                                alert("Folder creation failed");
+                                $("#FileOrFolderDiv").html(`<p>Creation failed</p>`);
                             } else if ($(data).find("result").text() == "EXISTS") {
-                                alert("File/Folder already exists");
+                                $("#FileOrFolderDiv").html(`<p>Already exists</p>`);
                             }
                         });
                     });
@@ -392,6 +392,7 @@ function convertFile(file) {// video file converting
             input: $("#adminPassword").val()
         }, function (data) {
             if ($(data).find("result").text() == "true") {
+                DialogBox("<div id='fileConversionDiv'></div>");
                 newfile = prompt("New File name (Relative not absolute) and extension\n Currently" + currentpath + file);// means that you type in Cars(2006).mp4 not /media/external/Movies/Cars(2006)/Cars(2006).mp4
                 $.post("FileWebsite_server.php", {
                     op: "ConvertVideo",
@@ -467,22 +468,34 @@ function renameFile(file) {
 
 function deleteFile(file) {
     if (!DeleteBlacklist.includes(file)) {
-        if (user_mode == "admin" && user_type == "admin" && confirm("are you sure you want to delete the file " + currentpath + file)) {
+        if (user_mode == "admin" && user_type == "admin") {
             $.post("FileWebsite_server.php", {
                 op: "adminpasscheck",
                 input: $("#adminPassword").val()
             }, function (data) {
                 if ($(data).find("result").text() == "true") {
-                    $.post("FileWebsite_server.php", {
-                        op: "Delete",
-                        file: currentpath + file
-                    },
-                        function () {
-                            PrintFiles(currentpath);
-                            console.log("File deleted");
-                        });
-                } else {
-                    alert("File deletion aborted");
+                    createDialogBox("<div id='deleteConfirmDiv'><p>Are you sure you want to delete "+currentpath+file+"?</p><br><button id='deleteConfirmTrue' class='accountButton deleteConfirmButtons'>Yes</button><button id='deleteConfirmFalse' class='accountButton deleteConfirmButtons'>No</button></div>", "secondary");
+                    $(".deleteConfirmButtons").click(function (e) { 
+                        if(e.target.id.includes("True")){
+                            $.post("FileWebsite_server.php", {
+                                op: "Delete",
+                                file: currentpath + file
+                            },function () {
+                                PrintFiles(currentpath);
+                                $("#secondaryDialogBox").html("<p id='closePopup' class='accountButton closePopup'>x</p><br><p>File successfully deleted</p>");
+                                $(".closePopup").click(function (e) {
+                                    //console.log(e.target.parentNode.id)
+                                    $("#" + e.target.parentNode.id + ",#secondaryDialogBox").hide();
+                                });
+                            });
+                        }else{
+                            $("#secondaryDialogBox").html("<p id='closePopup' class='accountButton closePopup'>x</p><br><p>File deletion aborted</p>");
+                            $(".closePopup").click(function (e) {
+                                //console.log(e.target.parentNode.id)
+                                $("#" + e.target.parentNode.id + ",#secondaryDialogBox").hide();
+                            });
+                        }
+                    });
                 }
             });
         }
@@ -493,22 +506,34 @@ function deleteFile(file) {
 
 function DeleteDir(file) {
     if (!DeleteBlacklist.includes(file)) {
-        if (user_mode == "admin" && user_type == "admin" && confirm("are you sure you want to delete the Directory " + currentpath + file)) {
+        if (user_mode == "admin" && user_type == "admin") {
             $.post("FileWebsite_server.php", {
                 op: "adminpasscheck",
                 input: $("#adminPassword").val()
             }, function (data) {
                 if ($(data).find("result").text() == "true") {
-                    $.post("FileWebsite_server.php", {
-                        op: "DeleteDir",
-                        file: currentpath + file
-                    }, function (data) {
-                        console.log()
-                        PrintFiles(currentpath);
-                        console.log("File deleted");
+                    createDialogBox("<div id='deleteConfirmDiv'><p>Are you sure you want to delete "+currentpath+file+"/?</p><br><button id='deleteConfirmTrue' class='accountButton deleteConfirmButtons'>Yes</button><button id='deleteConfirmFalse' class='accountButton deleteConfirmButtons'>No</button></div>", "secondary");
+                    $(".deleteConfirmButtons").click(function (e) { 
+                        if(e.target.id.includes("True")){
+                            $.post("FileWebsite_server.php", {
+                                op: "DeleteDir",
+                                file: currentpath + file
+                            }, function (data) {
+                                PrintFiles(currentpath);
+                                $("#secondaryDialogBox").html("<p id='closePopup' class='accountButton closePopup'>x</p><br><p>Directory successfully deleted</p>");
+                                $(".closePopup").click(function (e) {
+                                    //console.log(e.target.parentNode.id)
+                                    $("#" + e.target.parentNode.id + ",#secondaryDialogBox").hide();
+                                });
+                            });
+                        }else{
+                            $("#secondaryDialogBox").html("<p id='closePopup' class='accountButton closePopup'>x</p><br><p>Directory deletion aborted</p>");
+                            $(".closePopup").click(function (e) {
+                                //console.log(e.target.parentNode.id)
+                                $("#" + e.target.parentNode.id + ",#secondaryDialogBox").hide();
+                            });
+                        }
                     });
-                } else {
-                    alert("File deletion aborted");
                 }
             });
         }
@@ -632,7 +657,7 @@ function createDialogBox(html, box) {
     });
     $(selector).show();
     $(".closePopup").click(function (e) {
-        console.log(e.target.parentNode.id)
+        //console.log(e.target.parentNode.id)
         $("#" + e.target.parentNode.id + ",#secondaryDialogBox").hide();
     });
 }
@@ -710,13 +735,13 @@ function resetpassword(){
     $("#resetPasswordConfirmButton").click(function(e){ 
         $("#resetPasswordConfirmButton").unbind("click");
         let PasswordInput = $("#passwordResetInput").val();
-        console.log($("#passwordResetInput").val());
+        //console.log($("#passwordResetInput").val());
         if($("#passwordResetInput").val() != ""){
             $.post("FileWebsite_server.php", {
                 op:"resetPassword",
                 email:PasswordInput
             },function (data) {
-                console.log($(data).find("result").text());
+                //console.log($(data).find("result").text());
                 if($(data).find("result").text() == "OKOK"){
                     $("#formDiv").html(`<p>A email has been sent to ${PasswordInput}.</p>`);
                 }else{
@@ -727,7 +752,6 @@ function resetpassword(){
     });
     $("#passwordResetBack").click(function (e) { 
         mainPage();
-        console.log("b")
     });
 }
 
@@ -809,7 +833,7 @@ function showUsersTable(table){
             <td id='userTableNumber${index}' class='allUsersTable'><input type='text' id='NumberInput${index}' class='tableTextBox' value='${userTableDataArray[index].number}' style='width:200px;'></td>
             <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
         });
-        console.log(userTableDataArray);
+        //console.log(userTableDataArray);
         $("#adminAreaContent").html(`<p id='closeTable' class='accountButton'>x</p><div id='usersTable'>
         <table><tr><td>ID</td><td>Name</td>
         <td>Email</td><td>Password</td><td>User Type</td><td>Number</td><td>Temp Pass</td>${userTable}</table></div>`);
@@ -843,7 +867,7 @@ function showUsersTable(table){
                 number:TableNumber,
                 user_type:TableUserType
             },function (data) {
-                console.log($(data).find("result").text());
+                //console.log($(data).find("result").text());
             },);
         });
         $(".userIdTable").click(function (e) { 

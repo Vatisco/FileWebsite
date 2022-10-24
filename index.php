@@ -23,6 +23,7 @@
                 <a href="javascript:mainPage()" id='titleButton'><p id='Title'>Southserv Files</p></a>
                 <div id='MainContent'>
                     <div id='DialogBox'></div>
+                    <div id='secondaryDialogBox'></div>
                     <div id='Buttons'>
                         <button id='logoutButton' class='accountButton'>Log Out</button><button id='adminMode' class='accountButton'>Admin Mode</button><button id='Contact' class='accountButton'>Contact</button><button id='accountMenu' class='accountButton'>Account</button>
                     </div>
