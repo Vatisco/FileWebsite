@@ -15,7 +15,6 @@ if($_SERVER['PHP_SELF'] == __FILE__){
     $stmt->execute();
 }
 
-echo $_SERVER['PHP_SELF'];
 if (isset($_POST['op'])){
     $op = $_POST['op'];
 }else if(isset($_GET['op'])){
