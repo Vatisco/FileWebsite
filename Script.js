@@ -416,8 +416,13 @@ function adminFile(file, id, extension) {//Creating extra button for admin users
         DialogBox = DialogBox + "<p id='deleteDirId" + id + "' class='AdminOptions'>Delete</p>"
     }
     if (extension == "avi" || extension == "mkv" || extension == "mp4") {
-        DialogBox = DialogBox + "<p id ='convertid" + id + "' class='AdminOptions'>Convert</p>";
+        DialogBox = DialogBox + "<p id='convertid" + id + "' class='AdminOptions'>Convert</p>";
     }
+    filepath = currentpath + file.name;
+    let filearr = filepath.split("/");
+    filearr.splice(0, 2);
+    let currentfile = filearr.join("/");
+    DialogBox = DialogBox + "<div id='downloadid" + id + "' class='AdminOptions'><a href='" + currentfile + "' download='" + file.name + "'>Download</a></div>"; 
     $("#FilesList").append(Buttons);//extra button binding
     $("#manageid" + id).click(function (e) {
         createDialogBox(DialogBox, "main");
@@ -705,10 +710,10 @@ function showAccountMenu() {
         if ($(data).find("result").text() == "OK"){
             $("#accountArea").html(`<p id='accountAreaBack'>Back</p>
             <table id='accountAreaTable'>
-            <tr><td id='tableNameTitle' class='accountAreaTitles'>Name:</td><td id='tableNameContent'>${$(data).find("name").text()}</td></tr>
-            <tr><td id='tableEmailTitle' class='accountAreaTitles'>Email:</td><td id='tableEmailContent'>${$(data).find("email").text()}</td></tr>
+            <tr><td id='tableNameTitle' class='accountAreaTitles'>Name:</td><td><input type='text' id='tableNameContent' class='AccountMenuData AccountMenuTextBox' value='${$(data).find("name").text()}'></td></tr>
+            <tr><td id='tableEmailTitle' class='accountAreaTitles'>Email:</td><td><input type='text' id='tableEmailContent' class='AccountMenuData AccountMenuTextBox' value='${$(data).find("email").text()}'></td></tr>
             <tr><td id='tablePasswordTitle' class='accountAreaTitles'>Password:</td><td id='tablePasswordContent'>Click here to change your password</td></tr>
-            <tr><td id='tableNumberTitle' class='accountAreaTitles'>Number:</td><td id='tableNumberContent'>${$(data).find("number").text()}</td></tr>
+            <tr><td id='tableNumberTitle' class='accountAreaTitles'>Number:</td><td><input type='text' id='tableNumberContent' class='AccountMenuData AccountMenuTextBox' value='${$(data).find("number").text()}'></td></tr>
             <tr><td id='tableSessionsTitle' class='accountAreaTitles'>Sessions:</td><td id='tableSessionsContent'>${$(data).find("sessions").text()}</td></tr>
             <tr><td id='sessionRemovalTitle'class='accountAreaTitles'>Remove other Sessions</td><td id='removeOtherSessionsButtonTable'><button id='removeOtherSessionsButton' class='accountButtons'>Remove</button></td></tr></table>`);
             $("#tablePasswordContent").click(function (e) { 
@@ -719,6 +724,13 @@ function showAccountMenu() {
             });
             $("#removeOtherSessionsButton").click(function (e) { 
                 clearAllOtherSessions();
+            });
+            $(".AccountMenuData").bind("change", function (e) { 
+                ParentNode = e.target.parentNode.id;
+                selector = ("#" + ParentNode);
+                //Id = ParentNode.match(/(\d+)/)[0];
+                console.log(Id = $("Table" + ParentNode + "Content").text());
+
             });
         }else{
             addError("Your account was not found, please contact an administrator")
@@ -829,7 +841,7 @@ function showUsersTable(table){
             <td id='userTableName${index}' class='allUsersTable'><input type='text' id='NameInput${index}' class='tableTextBox' value='${userTableDataArray[index].name}'></td>
             <td id='userTableEmail${index}' class='allUsersTable'><input type='text' id='EmailInput${index}' class='tableTextBox' value='${userTableDataArray[index].email}'></td>
             <td id='userTablePassword${index}' class='allUsersTable'><input type='text' id='PasswordInput${index}' class='tableTextBox' value='${userTableDataArray[index].password}'></td>
-            <td id='userTableUserType${index}' class='allUsersTable'>${MakeTableDefaults(userTableDataArray[index].user_type, userTableDataArray[index].user_id, index)}</td>
+            <td id='userTableUserType${index}' class='allUsersTable'>${MakeTableUserTypeDefaults(userTableDataArray[index].user_type, userTableDataArray[index].user_id, index)}</td>
             <td id='userTableNumber${index}' class='allUsersTable'><input type='text' id='NumberInput${index}' class='tableTextBox' value='${userTableDataArray[index].number}' style='width:200px;'></td>
             <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
         });
@@ -896,7 +908,7 @@ function showUsersTable(table){
     });
 }
 
-function MakeTableDefaults(user_type, user_id, index){
+function MakeTableUserTypeDefaults(user_type, user_id, index){
     switch(user_type){
         case "admin":
             output = "<option selected>admin</option><option>user</option><option>requested</option>";

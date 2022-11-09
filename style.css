@@ -118,3 +118,10 @@ Video{
     margin: 0;
     font-size:16px;
 }
+
+.AccountMenuTextBox{
+    border: none;
+    outline: none;
+    margin: 0;
+    font-size:16px;
+}
