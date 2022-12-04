@@ -1,4 +1,4 @@
-var currentpath = "/", user_mode, user_type, user_id, EditorShown = false, filearray = [];;
+var currentpath = "/", user_mode, user_type, user_id, EditorShown = false, filearraytemp, filearray = [], whitelist = [], blacklist = [];
 mouse = { x: 0, y: 0 };
 class fileClass {
     constructor(name, fileType) {
@@ -7,7 +7,7 @@ class fileClass {
     }
 };
 class UserTableClass {
-    constructor(user_id, name, email, password, user_type, number, temp_pass){
+    constructor(user_id, name, email, password, user_type, number, temp_pass, whitelist, blacklist){
         this.user_id = user_id;
         this.name = name;
         this.email = email;
@@ -15,6 +15,8 @@ class UserTableClass {
         this.user_type = user_type;
         this.number = number;
         this.temp_pass = temp_pass;
+        this.whitelist = whitelist;
+        this.blacklist = blacklist;
     }
 }
 
@@ -84,6 +86,10 @@ function LogIn() { //log in function
                     AdminToggle();
                 });
             }
+            whitelist = ($(data).find("whitelist").text()).split("|");
+            if(whitelist == ["null"]){whitelist = [null]};
+            blacklist = ($(data).find("blacklist").text()).split("|");
+            if(blacklist == ["null"]){blacklist = [null]};
             PrintFiles("/");
         } else {
             addError("Your login failed");
@@ -113,22 +119,15 @@ function logInButton() {
     });
 }
 
-//Files blocked to normal users
-var Blacklist = ["", ".", "..", "$RECYCLE.BIN", "bin", "boot", "cdrom", "dev", "lib", "lib32", "lib64", "libx32", "lost+found", "mnt", "proc", "root", "run", "sbin", "snap",
-    "srv", "swap.img", "sys", "tmp", "var", "usr", "System Volume Information", "UMS.conf", "UMS.cred", "WMPInfo.xml", "database", "debug.log.prev", "Other", "Kids", "games",
-    "data", "Subs", "etc", "opt", "minecraft", "MC", "!Albums", "!Games", "!hidden", "~", "Backups"]; // Blacklisting files we don't want viewable
-var DeleteBlacklist = ["", ".", "..", "bin", "boot", "cdrom", "dev", "lib", "lib32", "lib64", "libx32", "lost+found", "mnt", "proc", "root", "run", "sbin", "snap",
-    "srv", "swap.img", "sys", "tmp", "var", "usr", "System Volume Information", "UMS.conf", "UMS.cred", "WMPInfo.xml", "database", "debug.log.prev", "Other", "Kids", "games",
-    "data", "etc", "opt", "home", "media", "external", "Movies", "southserv", "minecraft", "vpnserver", "world", "~", "Backups"]; //Blacklisting files we don't want to be deletable
-//Files blocked from everyone
-var Fullblacklist = ["", ".", ".."];
-//declaring variables outside so everything can see them
 var id = 0;
-var currentfiles = []//Array to hold files in
 function DisplayFiles(file, index) {// Displaying the files on the page
+    if (["", ".", ".."].includes(file.name)){
+        filearray.splice(index, 1);
+        return;
+    }
     let filter = $("#SearchInput").val().trim().toLowerCase();// getting the text in the filter
     let filterFile = file.name.toLowerCase(); //making all checks lowercase
-    if ((!Blacklist.includes(file.name) || (user_mode == "admin" && !Fullblacklist.includes(file.name))) && filterFile.includes(filter)) {// removing files that are in the blacklist or not in the filter
+    if (filterFile.includes(filter)) {// removing files that are in the blacklist or not in the filter
         filename = file.name.toString();//changing to string in case of numbers
         let FileType = FindExtension(file)
         if (user_mode == "admin") {
@@ -198,14 +197,23 @@ function PrintFiles(path) {// Getting the files from the Server
         TableStart(); //creating the back button and path viewer
         if (status == "success") {
             $("#FilesList").empty();
-            filearray = [];
-            $(data).find("file").each(function () { filearray.push(new fileClass($(this).text(), "")) });
-            $(data).find("file_type").each(function (index) { filearray[index].fileType = $(this).text() })
+            filearraytemp = [], filearray = [];
+            $(data).find("file").each(function () { filearraytemp.push(new fileClass($(this).text(), "")) });
+            $(data).find("file_type").each(function (index) { filearraytemp[index].fileType = $(this).text() })
             id = 0;
             if (currentpath.length > 1) {// if the path you are at isnt blank or /, the back button works
                 Back();
             };
             $("#FilesList").empty();
+            //CHECK WHITELIST AND BLACKLIST HERE BEFORE DISPLAYING FILES
+            filearraytemp.forEach((element, index) => {
+                if(!isInBlackList(filearraytemp[index].name)){
+                    if(isInWhiteList(filearraytemp[index].name )){
+                        filearray.push(filearraytemp[index]);
+                    }
+                }
+            })
+
             filearray.forEach(DisplayFiles);
             console.log("File count:" + id);//gives incrementing id's to every file in the list
         } else {
@@ -730,7 +738,6 @@ function showAccountMenu() {
                 selector = ("#" + ParentNode);
                 //Id = ParentNode.match(/(\d+)/)[0];
                 console.log(Id = $("Table" + ParentNode + "Content").text());
-
             });
         }else{
             addError("Your account was not found, please contact an administrator")
@@ -836,6 +843,8 @@ function showUsersTable(table){
         $(data).find("user_type").each(function(index) {userTableDataArray[index].user_type = $(this).text()});
         $(data).find("number").each(function(index) {userTableDataArray[index].number = $(this).text()});
         $(data).find("temp_pass").each(function(index) {userTableDataArray[index].temp_pass = $(this).text() || "null"});
+        $(data).find("whitelist").each(function(index) {userTableDataArray[index].whitelist = $(this).text()})
+        $(data).find("blacklist").each(function(index) {userTableDataArray[index].blacklist = $(this).text()})
         $.each(userTableDataArray, function (index) { 
             userTable = userTable + `<tr><td id='userTableUserId${index}' class='allUsersTable userIdTable' title='Delete User'>${userTableDataArray[index].user_id}</td>
             <td id='userTableName${index}' class='allUsersTable'><input type='text' id='NameInput${index}' class='tableTextBox' value='${userTableDataArray[index].name}'></td>
@@ -843,12 +852,14 @@ function showUsersTable(table){
             <td id='userTablePassword${index}' class='allUsersTable'><input type='text' id='PasswordInput${index}' class='tableTextBox' value='${userTableDataArray[index].password}'></td>
             <td id='userTableUserType${index}' class='allUsersTable'>${MakeTableUserTypeDefaults(userTableDataArray[index].user_type, userTableDataArray[index].user_id, index)}</td>
             <td id='userTableNumber${index}' class='allUsersTable'><input type='text' id='NumberInput${index}' class='tableTextBox' value='${userTableDataArray[index].number}' style='width:200px;'></td>
+            <td id='userTableWhiteList${index}' class='allUserTable'>${userTableDataArray[index].whitelist}</td>
+            <td id='userTableBlackList${index}' class='allUserTable'>${userTableDataArray[index].blacklist}</td>
             <td id='userTableTempPass${index}' class='allUsersTable'>${userTableDataArray[index].temp_pass}</td></tr>`
         });
         //console.log(userTableDataArray);
         $("#adminAreaContent").html(`<p id='closeTable' class='accountButton'>x</p><div id='usersTable'>
         <table><tr><td>ID</td><td>Name</td>
-        <td>Email</td><td>Password</td><td>User Type</td><td>Number</td><td>Temp Pass</td>${userTable}</table></div>`);
+        <td>Email</td><td>Password</td><td>User Type</td><td>Number</td><td>Whitelist</td><td>Blacklist</td><td>Temp Pass</td>${userTable}</table></div>`);
         $("#closeTable").click(function (e) { 
             $("#adminAreaContent").empty();
         });
@@ -924,4 +935,22 @@ function MakeTableUserTypeDefaults(user_type, user_id, index){
         break;
     }
     return `<select id='userTypeSelect${index}'>${output}</select>` 
+}
+
+function isInWhiteList(fileElement){
+    fileElement = currentpath + fileElement
+    if(whitelist == [null]){ return false;}
+    return whitelist.some(element => {
+        regex = new RegExp(element);
+        return fileElement.match(regex);
+    })
+}
+
+function isInBlackList(fileElement){
+    fileElement = currentpath + fileElement
+    if(blacklist == [null]){ return false;}
+    return blacklist.some(element => {
+        regex = new RegExp(element);
+        return fileElement.match(regex);
+    })
 }

@@ -34,14 +34,19 @@ switch($op){
         DoLogIn($_POST['email'], $_POST['password']);
     break;
     case "getLoginStatus":
-        $stmt = $conn->prepare("SELECT user_type FROM USERS WHERE user_id=?");
+        $stmt = $conn->prepare("SELECT user_type, whitelist, blacklist FROM USERS WHERE user_id=?");
         $stmt->execute(array($user_id));
-        $results = $stmt->fetchAll();
+        $result = $stmt->fetchAll();
         if($stmt->rowCount() == 1){
             $user_type = $result[0]['user_type'];
+            $whitelist = $result[0]['whitelist'];
+            ($whitelist == "") ? $whitelist = "null" : $whitelist = $whitelist;
+            $blacklist = $result[0]['blacklist'];
+            ($blacklist == "") ? $blacklist = "null" : $blacklist = $blacklist;
+            echo $result[0]['whitelist'];
             $stmt = $conn->prepare("UPDATE SESSIONS SET last_login=? WHERE session_id=?");
             $stmt->execute(array(date("Y-n-t G:i:s",time()), $sess_id));
-            echo"<user_type>$user_type</user_type>";
+            echo"<user_type>$user_type</user_type><whitelist>$whitelist</whitelist><blacklist>$blacklist</blacklist>";
         }else{
             echo "<user_type>logged_out</user_type>";
         }
@@ -508,7 +513,7 @@ function clearAllOtherSessions(){
 function getAllUsers($TABLE){
     global $conn;
     if($TABLE == "USERS"){
-        $stmt = $conn->prepare("SELECT name, user_id, email, password, user_type, number, temp_pass FROM USERS");
+        $stmt = $conn->prepare("SELECT name, user_id, email, password, user_type, number, temp_pass, whitelist, blacklist FROM USERS");
     }else{
         $stmt = $conn->prepare("SELECT name, user_id, email, password, user_type, number FROM ACCOUNT_REQUESTS");
     }
@@ -528,8 +533,11 @@ function getAllUsers($TABLE){
         $user_type = $result[$i]['user_type'];
         $number = $result[$i]['number'];
         $temp_pass = $result[$i]['temp_pass'];
+        $whitelist = $result[$i]['whitelist'];
+        $blacklist = $result[$i]['blacklist'];
         $output .= "<user_id>$user_id</user_id><name>$name</name><email>$email</email><password>$password</password>
-        <user_type>$user_type</user_type><number>$number</number><temp_pass>$temp_pass</temp_pass>";
+        <user_type>$user_type</user_type><number>$number</number><temp_pass>$temp_pass</temp_pass>
+        <whitelist>$whitelist</whitelist><blacklist>$blacklist</blacklist>";
     }
     echo "$output";
 }
@@ -597,7 +605,7 @@ function UpdateUser($table, $ID, $user_name,  $user_email, $user_password, $user
             }
         }
     }else{
-        echo"<result>ERRORb</result>";
+        echo"<result>ERROR</result>";
     }
 }
 
