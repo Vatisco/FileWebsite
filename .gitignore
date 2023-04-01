@@ -4,3 +4,6 @@
 /Certs/southienz.com.key
 /Certs/southienz.com.pem
 /Structure.txt
+/vendor
+/mode
+/lib
